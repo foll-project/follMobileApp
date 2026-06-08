@@ -29,7 +29,7 @@ fun CrearAbuelitoScreen(navController: NavController) {
     var enfermedades by remember { mutableStateOf("") }
     var medicamentos by remember { mutableStateOf("") }
 
-    val backgroundGradient = Brush.linearGradient(colors = listOf(Color(0xFFF6F8A7), Color(0xFFCAEFE2)))
+    val backgroundGradient = Brush.linearGradient(colors = listOf(Color(0xFFF6F8A7), Color(0xFFCAEFE2), Color(0xFFFDF1), Color(0xFFFDF1), Color(0xFFFDF1)))
 
     Scaffold(
         bottomBar = { FollBottomBar(navController, "care_screen") },

@@ -23,7 +23,7 @@ import pe.edu.upc.follmobileapp.core.ui.theme.FollDarkBlue
 @Composable
 fun WelcomeScreen(navController: NavController) {
     val backgroundGradient = Brush.linearGradient(
-        colors = listOf(Color(0xFFF6F8A7), Color(0xFFCAEFE2))
+        colors = listOf(Color(0xFFF6F8A7), Color(0xFFCAEFE2), Color(0xFFFDF1), Color(0xFFFDF1), Color(0xFFFDF1))
     )
 
     Box(

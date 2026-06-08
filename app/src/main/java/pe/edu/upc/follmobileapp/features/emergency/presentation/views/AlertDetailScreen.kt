@@ -1,6 +1,7 @@
 package pe.edu.upc.follmobileapp.features.emergency.presentation.views
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -41,7 +42,9 @@ fun AlertDetailScreen(navController: NavController) {
                 Surface(
                     shape = RoundedCornerShape(20.dp),
                     color = Color.White,
-                    modifier = Modifier.wrapContentWidth()
+                    modifier = Modifier
+                        .wrapContentWidth()
+                        .clickable { navController.popBackStack() }
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
