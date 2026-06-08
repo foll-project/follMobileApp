@@ -57,15 +57,31 @@ fun FollBottomBar(navController: NavController, currentRoute: String) {
         NavigationBarItem(
             icon = { Icon(Icons.Default.SnippetFolder, contentDescription = "History") },
             label = { Text("History") },
-            selected = currentRoute == "history_screen",
-            onClick = { /* TODO: Navegar a History cuando se cree la pantalla */ },
+            selected = currentRoute == Routes.History.route,
+            onClick = {
+                if (currentRoute != Routes.History.route) {
+                    navController.navigate(Routes.History.route) {
+                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            },
             colors = NavigationBarItemDefaults.colors(selectedIconColor = FollDarkBlue, indicatorColor = FollLightGreen, unselectedIconColor = FollDarkBlue)
         )
         NavigationBarItem(
             icon = { Icon(Icons.Default.Notifications, contentDescription = "Alerts") },
             label = { Text("Alerts") },
-            selected = currentRoute == "alerts_screen",
-            onClick = { /* TODO: Navegar a Alerts cuando se cree la pantalla */ },
+            selected = currentRoute == Routes.Alerts.route,
+            onClick = {
+                if (currentRoute != Routes.Alerts.route) {
+                    navController.navigate(Routes.Alerts.route) {
+                        popUpTo(navController.graph.findStartDestination().id) { saveState = true }
+                        launchSingleTop = true
+                        restoreState = true
+                    }
+                }
+            },
             colors = NavigationBarItemDefaults.colors(selectedIconColor = FollDarkBlue, indicatorColor = FollLightGreen, unselectedIconColor = FollDarkBlue)
         )
         NavigationBarItem(
