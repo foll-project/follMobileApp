@@ -16,23 +16,24 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import pe.edu.upc.follmobileapp.core.navigation.Routes
+import pe.edu.upc.follmobileapp.core.ui.components.FollButton
 import pe.edu.upc.follmobileapp.core.ui.components.FollTextField
 import pe.edu.upc.follmobileapp.core.ui.theme.FollDarkBlue
+import pe.edu.upc.follmobileapp.features.iam.presentation.viewmodels.RegisterViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun RegisterScreen(navController: NavController) {
-    var nombre by remember { mutableStateOf("") }
-    var correo by remember { mutableStateOf("") }
-    var celular by remember { mutableStateOf("") }
-    var dni by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
-    var confirmPassword by remember { mutableStateOf("") }
+fun RegisterScreen(
+    navController: NavController,
+    viewModel: RegisterViewModel = viewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
 
     val backgroundGradient = Brush.linearGradient(
-        colors = listOf(Color(0xFFF6F8A7), Color(0xFFCAEFE2), Color(0xFFFDF1), Color(0xFFFDF1), Color(0xFFFDF1))
+        colors = listOf(Color(0xFFF6F8A7), Color(0xFFCAEFE2), Color(0xFFFFFDF1), Color(0xFFFFFDF1), Color(0xFFFFFDF1))
     )
 
     Box(
@@ -67,30 +68,74 @@ fun RegisterScreen(navController: NavController) {
                 Column(
                     modifier = Modifier.padding(horizontal = 32.dp, vertical = 40.dp)
                 ) {
-                    FollTextField(label = "Nombre", placeholder = "Nombre", value = nombre, onValueChange = { nombre = it })
+                    FollTextField(
+                        label = "Nombres",
+                        placeholder = "Nombres",
+                        value = uiState.firstName,
+                        onValueChange = viewModel::onFirstNameChanged,
+                        isError = uiState.firstNameError != null,
+                        errorMessage = uiState.firstNameError
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
-                    FollTextField(label = "Correo", placeholder = "Correo", value = correo, onValueChange = { correo = it })
+                    FollTextField(
+                        label = "Apellidos",
+                        placeholder = "Apellidos",
+                        value = uiState.lastName,
+                        onValueChange = viewModel::onLastNameChanged,
+                        isError = uiState.lastNameError != null,
+                        errorMessage = uiState.lastNameError
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
-                    FollTextField(label = "Celular", placeholder = "Celular", value = celular, onValueChange = { celular = it })
+                    FollTextField(
+                        label = "Correo",
+                        placeholder = "Correo",
+                        value = uiState.email,
+                        onValueChange = viewModel::onEmailChanged,
+                        isError = uiState.emailError != null,
+                        errorMessage = uiState.emailError
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
-                    FollTextField(label = "DNI", placeholder = "DNI", value = dni, onValueChange = { dni = it })
+                    FollTextField(
+                        label = "Celular",
+                        placeholder = "Celular",
+                        value = uiState.phoneNumber,
+                        onValueChange = viewModel::onPhoneChanged,
+                        isError = uiState.phoneNumberError != null,
+                        errorMessage = uiState.phoneNumberError
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
-                    FollTextField(label = "Contraseña", placeholder = "Contraseña", value = password, onValueChange = { password = it }, isPassword = true)
+                    FollTextField(
+                        label = "Contraseña",
+                        placeholder = "Contraseña",
+                        value = uiState.password,
+                        onValueChange = viewModel::onPasswordChanged,
+                        isPassword = true,
+                        isError = uiState.passwordError != null,
+                        errorMessage = uiState.passwordError
+                    )
                     Spacer(modifier = Modifier.height(16.dp))
-                    FollTextField(label = "Confirmar Contraseña", placeholder = "Contraseña", value = confirmPassword, onValueChange = { confirmPassword = it }, isPassword = true)
+                    FollTextField(
+                        label = "Confirmar Contraseña",
+                        placeholder = "Contraseña",
+                        value = uiState.confirmPassword,
+                        onValueChange = viewModel::onConfirmPasswordChanged,
+                        isPassword = true,
+                        isError = uiState.confirmPasswordError != null,
+                        errorMessage = uiState.confirmPasswordError
+                    )
 
                     Spacer(modifier = Modifier.height(32.dp))
 
-                    Button(
-                        onClick = { navController.popBackStack() },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = FollDarkBlue),
-                        shape = RoundedCornerShape(30.dp)
-                    ) {
-                        Text("Crear Cuenta", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                    }
+                    FollButton(
+                        text = "Crear Cuenta",
+                        onClick = {
+                            if (viewModel.validate()) {
+                                navController.navigate(Routes.Dashboard.route) {
+                                    popUpTo(Routes.Welcome.route) { inclusive = true }
+                                }
+                            }
+                        }
+                    )
 
                     Spacer(modifier = Modifier.height(24.dp))
 
@@ -105,7 +150,12 @@ fun RegisterScreen(navController: NavController) {
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             textDecoration = TextDecoration.Underline,
-                            modifier = Modifier.clickable { navController.navigate(Routes.Login.route) }
+                            modifier = Modifier.clickable {
+                                navController.navigate(Routes.Login.route) {
+                                    popUpTo(Routes.Welcome.route) { inclusive = false }
+                                    launchSingleTop = true
+                                }
+                            }
                         )
                     }
                 }

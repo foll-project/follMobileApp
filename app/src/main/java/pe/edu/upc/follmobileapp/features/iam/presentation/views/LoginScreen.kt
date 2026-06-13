@@ -14,18 +14,23 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import pe.edu.upc.follmobileapp.core.navigation.Routes
+import pe.edu.upc.follmobileapp.core.ui.components.FollButton
 import pe.edu.upc.follmobileapp.core.ui.components.FollTextField
 import pe.edu.upc.follmobileapp.core.ui.theme.FollDarkBlue
+import pe.edu.upc.follmobileapp.features.iam.presentation.viewmodels.LoginViewModel
 
 @Composable
-fun LoginScreen(navController: NavController) {
-    var correo by remember { mutableStateOf("") }
-    var password by remember { mutableStateOf("") }
+fun LoginScreen(
+    navController: NavController,
+    viewModel: LoginViewModel = viewModel()
+) {
+    val uiState by viewModel.uiState.collectAsState()
 
     val backgroundGradient = Brush.linearGradient(
-        colors = listOf(Color(0xFFF6F8A7), Color(0xFFCAEFE2), Color(0xFFFDF1), Color(0xFFFDF1), Color(0xFFFDF1))
+        colors = listOf(Color(0xFFF6F8A7), Color(0xFFCAEFE2), Color(0xFFFFFDF1), Color(0xFFFFFDF1), Color(0xFFFFFDF1))
     )
 
     Box(
@@ -62,32 +67,34 @@ fun LoginScreen(navController: NavController) {
                     FollTextField(
                         label = "Correo electrónico",
                         placeholder = "Correo electrónico",
-                        value = correo,
-                        onValueChange = { correo = it }
+                        value = uiState.email,
+                        onValueChange = viewModel::onEmailChanged,
+                        isError = uiState.emailError != null,
+                        errorMessage = uiState.emailError
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     FollTextField(
                         label = "Contraseña",
                         placeholder = "Contraseña",
-                        value = password,
-                        onValueChange = { password = it },
-                        isPassword = true
+                        value = uiState.password,
+                        onValueChange = viewModel::onPasswordChanged,
+                        isPassword = true,
+                        isError = uiState.passwordError != null,
+                        errorMessage = uiState.passwordError
                     )
 
                     Spacer(modifier = Modifier.height(40.dp))
 
-                    Button(
+                    FollButton(
+                        text = "Iniciar Sesión",
                         onClick = {
-                            navController.navigate(Routes.Dashboard.route)
-                        },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = FollDarkBlue),
-                        shape = RoundedCornerShape(30.dp)
-                    ) {
-                        Text("Iniciar Sesión", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                    }
+                            if (viewModel.validate()) {
+                                navController.navigate(Routes.Dashboard.route) {
+                                    popUpTo(Routes.Welcome.route) { inclusive = true }
+                                }
+                            }
+                        }
+                    )
 
                     Spacer(modifier = Modifier.height(24.dp))
 
@@ -103,7 +110,10 @@ fun LoginScreen(navController: NavController) {
                             fontWeight = FontWeight.Bold,
                             textDecoration = TextDecoration.Underline,
                             modifier = Modifier.clickable {
-                                navController.navigate(Routes.Register.route)
+                                navController.navigate(Routes.Register.route) {
+                                    popUpTo(Routes.Welcome.route) { inclusive = false }
+                                    launchSingleTop = true
+                                }
                             }
                         )
                     }

@@ -21,7 +21,7 @@ private val FollColorScheme = lightColorScheme(
     background = FollBackground,
     surface = White,
     onSurface = FollDarkGray,
-    error = FollOrange // Usaremos este naranja para errores/alertas medias
+    error = FollError
 )
 
 @Composable

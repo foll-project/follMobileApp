@@ -14,4 +14,6 @@ sealed class Routes(val route: String) {
     object Solicitudes : Routes("solicitudes_screen")
     object CrearAbuelito : Routes("crear_abuelito_screen")
     object AbuelitoDetail : Routes("abuelito_detail_screen")
+    object Cuidadores : Routes("cuidadores_screen")
+    object Anotaciones : Routes("anotaciones_screen")
 }
