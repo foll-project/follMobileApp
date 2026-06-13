@@ -18,6 +18,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import pe.edu.upc.follmobileapp.core.navigation.Routes
+import pe.edu.upc.follmobileapp.core.ui.components.FollButton
 import pe.edu.upc.follmobileapp.core.ui.theme.FollDarkBlue
 
 @Composable
@@ -84,16 +85,10 @@ fun WelcomeScreen(navController: NavController) {
                     modifier = Modifier.padding(horizontal = 32.dp, vertical = 40.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Button(
-                        onClick = { navController.navigate(Routes.Login.route) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = FollDarkBlue),
-                        shape = RoundedCornerShape(30.dp)
-                    ) {
-                        Text("Iniciar Sesión", fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                    }
+                    FollButton(
+                        text = "Iniciar Sesión",
+                        onClick = { navController.navigate(Routes.Login.route) }
+                    )
 
                     Spacer(modifier = Modifier.height(16.dp))
 
