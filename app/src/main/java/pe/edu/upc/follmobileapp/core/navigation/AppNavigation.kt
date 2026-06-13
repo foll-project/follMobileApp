@@ -9,13 +9,15 @@ import pe.edu.upc.follmobileapp.features.iam.presentation.views.LoginScreen
 import pe.edu.upc.follmobileapp.features.iam.presentation.views.RegisterScreen
 import pe.edu.upc.follmobileapp.features.emergency.presentation.views.DashboardScreen
 import pe.edu.upc.follmobileapp.features.iam.presentation.views.ProfileScreen
-import pe.edu.upc.follmobileapp.features.iam.presentation.views.CareScreen
+import pe.edu.upc.follmobileapp.features.care.presentation.views.CareScreen
 import pe.edu.upc.follmobileapp.features.communication.presentation.views.SolicitudesScreen
 import pe.edu.upc.follmobileapp.features.emergency.presentation.views.AlertDetailScreen
 import pe.edu.upc.follmobileapp.features.emergency.presentation.views.AlertsScreen
 import pe.edu.upc.follmobileapp.features.emergency.presentation.views.HistoryScreen
-import pe.edu.upc.follmobileapp.features.iam.presentation.views.CrearAbuelitoScreen
-import pe.edu.upc.follmobileapp.features.iam.presentation.views.AbuelitoDetailScreen
+import pe.edu.upc.follmobileapp.features.care.presentation.views.CrearAbuelitoScreen
+import pe.edu.upc.follmobileapp.features.care.presentation.views.AbuelitoDetailScreen
+import pe.edu.upc.follmobileapp.features.care.presentation.views.CuidadoresScreen
+import pe.edu.upc.follmobileapp.features.care.presentation.views.AnotacionesScreen
 
 @Composable
 fun AppNavigation() {
@@ -62,12 +64,28 @@ fun AppNavigation() {
             AlertsScreen(navController = navController)
         }
 
-        composable(Routes.AlertDetail.route) {
-            AlertDetailScreen(navController = navController)
+        composable(Routes.AlertDetail.route + "/{alertId}") { backStackEntry ->
+            val alertIdStr = backStackEntry.arguments?.getString("alertId") ?: "1"
+            val alertId = alertIdStr.toLongOrNull() ?: 1L
+            AlertDetailScreen(navController = navController, alertId = alertId)
         }
         
-        composable(Routes.AbuelitoDetail.route) {
-            AbuelitoDetailScreen(navController = navController)
+        composable(Routes.AbuelitoDetail.route + "/{patientId}") { backStackEntry ->
+            val patientIdStr = backStackEntry.arguments?.getString("patientId") ?: "1"
+            val patientId = patientIdStr.toLongOrNull() ?: 1L
+            AbuelitoDetailScreen(navController = navController, patientId = patientId)
+        }
+        
+        composable(Routes.Cuidadores.route + "/{patientId}") { backStackEntry ->
+            val patientIdStr = backStackEntry.arguments?.getString("patientId") ?: "1"
+            val patientId = patientIdStr.toLongOrNull() ?: 1L
+            CuidadoresScreen(navController = navController, patientId = patientId)
+        }
+        
+        composable(Routes.Anotaciones.route + "/{patientId}") { backStackEntry ->
+            val patientIdStr = backStackEntry.arguments?.getString("patientId") ?: "1"
+            val patientId = patientIdStr.toLongOrNull() ?: 1L
+            AnotacionesScreen(navController = navController, patientId = patientId)
         }
     }
 }

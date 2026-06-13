@@ -12,3 +12,4 @@ val FollOrange = Color(0xFFE8BA62)     // Alertas medias
 val FollBackground = Color(0xFFFFFDF1) // Color de fondo principal de la app
 val FollDarkGray = Color(0xFF404040)   // Textos secundarios
 val White = Color(0xFFFFFFFF)          // Tarjetas, inputs
+val FollError = Color(0xFFE86B54)      // Color rojo para errores
