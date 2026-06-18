@@ -27,17 +27,21 @@ import pe.edu.upc.follmobileapp.core.ui.components.FollTextField
 import pe.edu.upc.follmobileapp.core.ui.components.FollTopBar
 import pe.edu.upc.follmobileapp.core.ui.theme.*
 import pe.edu.upc.follmobileapp.features.care.presentation.viewmodels.AbuelitoDetailViewModel
+import pe.edu.upc.follmobileapp.features.care.presentation.viewmodels.AbuelitoDetailViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AbuelitoDetailScreen(
     navController: NavController,
     patientId: Long,
-    viewModel: AbuelitoDetailViewModel = viewModel()
+    viewModel: AbuelitoDetailViewModel = viewModel(factory = AbuelitoDetailViewModelFactory(LocalContext.current))
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     var showDeleteDialog by remember { mutableStateOf(false) }
+    var showLinkDeviceDialog by remember { mutableStateOf(false) }
+    var showUnlinkDeviceDialog by remember { mutableStateOf(false) }
+    var deviceIdInput by remember { mutableStateOf("") }
 
     // Cargar datos del abuelito al iniciar
     LaunchedEffect(patientId) {
@@ -56,6 +60,13 @@ fun AbuelitoDetailScreen(
         if (uiState.isDeleted) {
             Toast.makeText(context, "Abuelito eliminado", Toast.LENGTH_SHORT).show()
             navController.popBackStack()
+        }
+    }
+
+    LaunchedEffect(uiState.actionMessage) {
+        uiState.actionMessage?.let { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+            viewModel.clearActionMessage()
         }
     }
 
@@ -121,6 +132,161 @@ fun AbuelitoDetailScreen(
                                 label = "Medicamentos",
                                 value = uiState.medicamentos.ifBlank { "Ninguno registrado" }
                             )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // SECCIÓN DISPOSITIVO
+                            Column(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalAlignment = Alignment.Start
+                            ) {
+                                Text(
+                                    text = "Dispositivo IoT (Sensor)",
+                                    fontSize = 13.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = FollDarkBlue
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+
+                                val device = uiState.device
+                                if (device == null) {
+                                    Card(
+                                        shape = RoundedCornerShape(16.dp),
+                                        colors = CardDefaults.cardColors(containerColor = Color(0xFFFAFAFA)),
+                                        border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.5f)),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(16.dp),
+                                            horizontalAlignment = Alignment.CenterHorizontally
+                                        ) {
+                                            Icon(
+                                                imageVector = Icons.Default.LinkOff,
+                                                contentDescription = null,
+                                                tint = Color.Gray,
+                                                modifier = Modifier.size(36.dp)
+                                            )
+                                            Spacer(modifier = Modifier.height(8.dp))
+                                            Text(
+                                                text = "Sin dispositivo vinculado",
+                                                fontWeight = FontWeight.Medium,
+                                                color = Color.Gray,
+                                                fontSize = 14.sp
+                                            )
+                                            Spacer(modifier = Modifier.height(12.dp))
+                                            Button(
+                                                onClick = {
+                                                    deviceIdInput = ""
+                                                    showLinkDeviceDialog = true
+                                                },
+                                                colors = ButtonDefaults.buttonColors(containerColor = FollDarkBlue),
+                                                shape = RoundedCornerShape(20.dp),
+                                                modifier = Modifier.height(36.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.Add,
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(16.dp),
+                                                    tint = Color.White
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text("Vincular Dispositivo", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Card(
+                                        shape = RoundedCornerShape(16.dp),
+                                        colors = CardDefaults.cardColors(containerColor = Color(0xFFE8F5E9)),
+                                        border = BorderStroke(1.dp, Color(0xFFC8E6C9)),
+                                        modifier = Modifier.fillMaxWidth()
+                                    ) {
+                                        Column(
+                                            modifier = Modifier.padding(16.dp)
+                                        ) {
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Icon(
+                                                        imageVector = Icons.Default.DeveloperBoard,
+                                                        contentDescription = null,
+                                                        tint = Color(0xFF2E7D32),
+                                                        modifier = Modifier.size(24.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(8.dp))
+                                                    Text(
+                                                        text = "Sensor: ${device.id}",
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = Color(0xFF2E7D32),
+                                                        fontSize = 15.sp
+                                                    )
+                                                }
+                                                Surface(
+                                                    shape = RoundedCornerShape(12.dp),
+                                                    color = if (device.status.equals("Online", ignoreCase = true)) Color(0xFF81C784) else Color(0xFFE0E0E0),
+                                                    modifier = Modifier.padding(start = 8.dp)
+                                                ) {
+                                                    Text(
+                                                        text = device.status,
+                                                        color = Color.White,
+                                                        fontSize = 11.sp,
+                                                        fontWeight = FontWeight.Bold,
+                                                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp)
+                                                    )
+                                                }
+                                            }
+                                            Spacer(modifier = Modifier.height(12.dp))
+                                            Row(
+                                                modifier = Modifier.fillMaxWidth(),
+                                                horizontalArrangement = Arrangement.SpaceBetween,
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Icon(
+                                                        imageVector = if (device.isCharging) Icons.Default.BatteryChargingFull else Icons.Default.BatteryFull,
+                                                        contentDescription = null,
+                                                        tint = if (device.batteryPercentage < 20) FollError else Color(0xFF2E7D32),
+                                                        modifier = Modifier.size(20.dp)
+                                                    )
+                                                    Spacer(modifier = Modifier.width(6.dp))
+                                                    Text(
+                                                        text = "${device.batteryPercentage}%" + if (device.isCharging) " (Cargando)" else "",
+                                                        fontSize = 14.sp,
+                                                        color = FollDarkGray
+                                                    )
+                                                }
+                                                Text(
+                                                    text = device.ultimoReporte,
+                                                    fontSize = 12.sp,
+                                                    color = Color.Gray
+                                                )
+                                            }
+                                            Spacer(modifier = Modifier.height(12.dp))
+                                            OutlinedButton(
+                                                onClick = { showUnlinkDeviceDialog = true },
+                                                border = BorderStroke(1.dp, FollError),
+                                                colors = ButtonDefaults.outlinedButtonColors(contentColor = FollError),
+                                                shape = RoundedCornerShape(20.dp),
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .height(36.dp)
+                                            ) {
+                                                Icon(
+                                                    imageVector = Icons.Default.LinkOff,
+                                                    contentDescription = null,
+                                                    tint = FollError,
+                                                    modifier = Modifier.size(16.dp)
+                                                )
+                                                Spacer(modifier = Modifier.width(4.dp))
+                                                Text("Desvincular Dispositivo", fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                                            }
+                                        }
+                                    }
+                                }
+                            }
 
                             Spacer(modifier = Modifier.height(24.dp))
 
@@ -318,6 +484,90 @@ fun AbuelitoDetailScreen(
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
+                    Text("Cancelar", color = FollDarkBlue)
+                }
+            },
+            shape = RoundedCornerShape(24.dp),
+            containerColor = Color.White
+        )
+    }
+
+    // Modal de Vinculación de Dispositivo
+    if (showLinkDeviceDialog) {
+        AlertDialog(
+            onDismissRequest = { showLinkDeviceDialog = false },
+            title = { Text("Vincular Dispositivo", fontWeight = FontWeight.Bold, color = FollDarkBlue) },
+            text = {
+                Column {
+                    Text("Ingresa el ID del dispositivo hardware para asociarlo al abuelito:", modifier = Modifier.padding(bottom = 12.dp))
+                    OutlinedTextField(
+                        value = deviceIdInput,
+                        onValueChange = { input ->
+                            if (input.all { it.isDigit() }) {
+                                deviceIdInput = input
+                            }
+                        },
+                        placeholder = { Text("Ej: 1001") },
+                        singleLine = true,
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = TextFieldDefaults.colors(
+                            focusedContainerColor = Color.Transparent,
+                            unfocusedContainerColor = Color.Transparent,
+                            focusedIndicatorColor = FollDarkBlue,
+                            unfocusedIndicatorColor = Color.LightGray
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val idVal = deviceIdInput.toIntOrNull()
+                        if (idVal != null) {
+                            showLinkDeviceDialog = false
+                            viewModel.linkDevice(idVal)
+                        } else {
+                            Toast.makeText(context, "Por favor ingresa un ID válido", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = FollDarkBlue),
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+                    Text("Vincular", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showLinkDeviceDialog = false }) {
+                    Text("Cancelar", color = FollDarkBlue)
+                }
+            },
+            shape = RoundedCornerShape(24.dp),
+            containerColor = Color.White
+        )
+    }
+
+    // Modal de Confirmación de Desvinculación de Dispositivo
+    if (showUnlinkDeviceDialog) {
+        AlertDialog(
+            onDismissRequest = { showUnlinkDeviceDialog = false },
+            title = { Text("¿Desvincular dispositivo?", fontWeight = FontWeight.Bold, color = FollDarkBlue) },
+            text = { Text("Se desasociará el sensor de este paciente y dejará de recibir alertas y telemetría en tiempo real. ¿Deseas continuar?") },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showUnlinkDeviceDialog = false
+                        uiState.device?.id?.replace("#", "")?.trim()?.toIntOrNull()?.let { deviceId ->
+                            viewModel.unlinkDevice(deviceId)
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = FollError)
+                ) {
+                    Text("Desvincular", color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showUnlinkDeviceDialog = false }) {
                     Text("Cancelar", color = FollDarkBlue)
                 }
             },

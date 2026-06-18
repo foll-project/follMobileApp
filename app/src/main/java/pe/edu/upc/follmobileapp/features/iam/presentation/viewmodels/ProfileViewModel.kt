@@ -1,10 +1,13 @@
 package pe.edu.upc.follmobileapp.features.iam.presentation.viewmodels
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import pe.edu.upc.follmobileapp.features.iam.domain.repository.AuthRepository
 
 enum class ProfileSubScreen {
     MAIN,
@@ -15,26 +18,46 @@ enum class ProfileSubScreen {
 data class ProfileUiState(
     val currentSubScreen: ProfileSubScreen = ProfileSubScreen.MAIN,
     
-    // User fields (initial values mock what is in ProfileScreen: María González)
-    val firstName: String = "María",
+    // User fields
+    val firstName: String = "",
     val firstNameError: String? = null,
-    val lastName: String = "González",
+    val lastName: String = "",
     val lastNameError: String? = null,
-    val email: String = "maria.gonzalez@gmail.com",
+    val email: String = "",
     val emailError: String? = null,
-    val phoneNumber: String = "987654321",
+    val phoneNumber: String = "",
     val phoneNumberError: String? = null,
-    val password: String = "maria123",
+    val password: String = "••••••••", // Password is mock since backend doesn't return it
     val passwordError: String? = null,
-    val confirmPassword: String = "maria123",
+    val confirmPassword: String = "••••••••",
     val confirmPasswordError: String? = null,
     
+    val isLoading: Boolean = false,
     val actionMessage: String? = null
 )
 
-class ProfileViewModel : ViewModel() {
+class ProfileViewModel(
+    private val authRepository: AuthRepository
+) : ViewModel() {
     private val _uiState = MutableStateFlow(ProfileUiState())
     val uiState: StateFlow<ProfileUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            authRepository.getLoggedInUser().collect { user ->
+                user?.let { u ->
+                    _uiState.update { state ->
+                        state.copy(
+                            firstName = u.firstName,
+                            lastName = u.lastName,
+                            email = u.email,
+                            phoneNumber = u.phoneNumber
+                        )
+                    }
+                }
+            }
+        }
+    }
 
     fun navigateTo(subScreen: ProfileSubScreen) {
         _uiState.update { it.copy(currentSubScreen = subScreen) }
@@ -157,12 +180,37 @@ class ProfileViewModel : ViewModel() {
                 emailError = emailErr,
                 phoneNumberError = phoneErr,
                 passwordError = passwordErr,
-                confirmPasswordError = confirmPasswordErr,
-                actionMessage = if (isValid) "Datos actualizados correctamente" else null,
-                currentSubScreen = if (isValid) ProfileSubScreen.MAIN else state.currentSubScreen
+                confirmPasswordError = confirmPasswordErr
             )
         }
+
+        if (isValid) {
+            viewModelScope.launch {
+                val state = _uiState.value
+                _uiState.update { it.copy(isLoading = true) }
+                val result = authRepository.updateLocalUser(
+                    firstName = state.firstName,
+                    lastName = state.lastName,
+                    email = state.email,
+                    phoneNumber = state.phoneNumber
+                )
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        actionMessage = if (result.isSuccess) "Datos actualizados correctamente" else "Error al guardar los cambios localmente",
+                        currentSubScreen = if (result.isSuccess) ProfileSubScreen.MAIN else state.currentSubScreen
+                    )
+                }
+            }
+        }
         return isValid
+    }
+
+    fun logout(onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            authRepository.logout()
+            onSuccess()
+        }
     }
 
     fun clearActionMessage() {

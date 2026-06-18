@@ -30,6 +30,7 @@ import pe.edu.upc.follmobileapp.core.ui.components.FollTopBar
 import pe.edu.upc.follmobileapp.core.ui.theme.*
 import pe.edu.upc.follmobileapp.features.care.presentation.components.PatientCardItem
 import pe.edu.upc.follmobileapp.features.care.presentation.viewmodels.CareViewModel
+import pe.edu.upc.follmobileapp.features.care.presentation.viewmodels.CareViewModelFactory
 import pe.edu.upc.follmobileapp.features.care.presentation.viewmodels.CaregiverRole
 import pe.edu.upc.follmobileapp.features.care.presentation.viewmodels.PatientUiModel
 
@@ -37,7 +38,7 @@ import pe.edu.upc.follmobileapp.features.care.presentation.viewmodels.PatientUiM
 @Composable
 fun CareScreen(
     navController: NavController,
-    viewModel: CareViewModel = viewModel()
+    viewModel: CareViewModel = viewModel(factory = CareViewModelFactory(LocalContext.current))
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val backgroundGradient = Brush.linearGradient(

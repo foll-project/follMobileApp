@@ -22,23 +22,40 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import pe.edu.upc.follmobileapp.core.ui.theme.*
 import pe.edu.upc.follmobileapp.features.emergency.presentation.viewmodels.AlertViewModel
+import pe.edu.upc.follmobileapp.features.emergency.presentation.viewmodels.AlertViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlertDetailScreen(
     navController: NavController,
     alertId: Long,
-    viewModel: AlertViewModel = viewModel()
+    viewModel: AlertViewModel = viewModel(factory = AlertViewModelFactory(LocalContext.current))
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val alert = uiState.alerts.firstOrNull { it.id == alertId }
     val uriHandler = LocalUriHandler.current
     var showMedicalDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    LaunchedEffect(uiState.actionMessage) {
+        uiState.actionMessage?.let { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+            viewModel.clearActionMessage()
+        }
+    }
+
+    LaunchedEffect(uiState.errorMessage) {
+        uiState.errorMessage?.let { err ->
+            Toast.makeText(context, err, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     // Gradiente premium suave, llamativo pero reconfortante y profesional (arena, coral pastel y blanco)
     val backgroundGradient = Brush.linearGradient(
@@ -337,7 +354,11 @@ fun AlertDetailScreen(
 
                     // Botón Voy en camino
                     Button(
-                        onClick = { /* Lógica de aviso */ },
+                        onClick = {
+                            viewModel.acknowledgeAlert(alert.id) {
+                                navController.popBackStack()
+                            }
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp),

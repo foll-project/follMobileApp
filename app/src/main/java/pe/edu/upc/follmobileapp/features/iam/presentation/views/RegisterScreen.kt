@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -22,14 +23,19 @@ import pe.edu.upc.follmobileapp.core.navigation.Routes
 import pe.edu.upc.follmobileapp.core.ui.components.FollButton
 import pe.edu.upc.follmobileapp.core.ui.components.FollTextField
 import pe.edu.upc.follmobileapp.core.ui.theme.FollDarkBlue
+import pe.edu.upc.follmobileapp.features.iam.data.di.DataModule
 import pe.edu.upc.follmobileapp.features.iam.presentation.viewmodels.RegisterViewModel
+import pe.edu.upc.follmobileapp.features.iam.presentation.viewmodels.RegisterViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun RegisterScreen(
-    navController: NavController,
-    viewModel: RegisterViewModel = viewModel()
+    navController: NavController
 ) {
+    val context = LocalContext.current
+    val viewModel: RegisterViewModel = viewModel(
+        factory = RegisterViewModelFactory(DataModule.provideAuthRepository(context))
+    )
     val uiState by viewModel.uiState.collectAsState()
 
     val backgroundGradient = Brush.linearGradient(
@@ -68,13 +74,24 @@ fun RegisterScreen(
                 Column(
                     modifier = Modifier.padding(horizontal = 32.dp, vertical = 40.dp)
                 ) {
+                    if (uiState.errorMessage != null) {
+                        Text(
+                            text = uiState.errorMessage!!,
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                    }
+
                     FollTextField(
                         label = "Nombres",
                         placeholder = "Nombres",
                         value = uiState.firstName,
                         onValueChange = viewModel::onFirstNameChanged,
                         isError = uiState.firstNameError != null,
-                        errorMessage = uiState.firstNameError
+                        errorMessage = uiState.firstNameError,
+                        enabled = !uiState.isLoading
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     FollTextField(
@@ -83,7 +100,8 @@ fun RegisterScreen(
                         value = uiState.lastName,
                         onValueChange = viewModel::onLastNameChanged,
                         isError = uiState.lastNameError != null,
-                        errorMessage = uiState.lastNameError
+                        errorMessage = uiState.lastNameError,
+                        enabled = !uiState.isLoading
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     FollTextField(
@@ -92,7 +110,8 @@ fun RegisterScreen(
                         value = uiState.email,
                         onValueChange = viewModel::onEmailChanged,
                         isError = uiState.emailError != null,
-                        errorMessage = uiState.emailError
+                        errorMessage = uiState.emailError,
+                        enabled = !uiState.isLoading
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     FollTextField(
@@ -101,7 +120,8 @@ fun RegisterScreen(
                         value = uiState.phoneNumber,
                         onValueChange = viewModel::onPhoneChanged,
                         isError = uiState.phoneNumberError != null,
-                        errorMessage = uiState.phoneNumberError
+                        errorMessage = uiState.phoneNumberError,
+                        enabled = !uiState.isLoading
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     FollTextField(
@@ -111,7 +131,8 @@ fun RegisterScreen(
                         onValueChange = viewModel::onPasswordChanged,
                         isPassword = true,
                         isError = uiState.passwordError != null,
-                        errorMessage = uiState.passwordError
+                        errorMessage = uiState.passwordError,
+                        enabled = !uiState.isLoading
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     FollTextField(
@@ -121,17 +142,19 @@ fun RegisterScreen(
                         onValueChange = viewModel::onConfirmPasswordChanged,
                         isPassword = true,
                         isError = uiState.confirmPasswordError != null,
-                        errorMessage = uiState.confirmPasswordError
+                        errorMessage = uiState.confirmPasswordError,
+                        enabled = !uiState.isLoading
                     )
 
                     Spacer(modifier = Modifier.height(32.dp))
 
                     FollButton(
-                        text = "Crear Cuenta",
+                        text = if (uiState.isLoading) "Registrando..." else "Crear Cuenta",
+                        enabled = !uiState.isLoading,
                         onClick = {
-                            if (viewModel.validate()) {
-                                navController.navigate(Routes.Dashboard.route) {
-                                    popUpTo(Routes.Welcome.route) { inclusive = true }
+                            viewModel.register {
+                                navController.navigate(Routes.Login.route) {
+                                    popUpTo(Routes.Welcome.route) { inclusive = false }
                                 }
                             }
                         }
@@ -150,7 +173,7 @@ fun RegisterScreen(
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             textDecoration = TextDecoration.Underline,
-                            modifier = Modifier.clickable {
+                            modifier = Modifier.clickable(enabled = !uiState.isLoading) {
                                 navController.navigate(Routes.Login.route) {
                                     popUpTo(Routes.Welcome.route) { inclusive = false }
                                     launchSingleTop = true
