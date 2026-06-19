@@ -83,6 +83,26 @@ class AlertViewModel(
         }
     }
 
+    /**
+     * Atiende la emergencia: cierra el incidente en el backend y avisa en tiempo real
+     * a los demás cuidadores. Tras esto la caída deja de estar activa y podrán llegar
+     * nuevas caídas del dispositivo.
+     */
+    fun attendAlert(patientId: Long, onSuccess: () -> Unit = {}) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            val result = emergencyRepository.attendFall(patientId)
+            if (result.isSuccess) {
+                _uiState.update {
+                    it.copy(isLoading = false, actionMessage = "Atendiste esta emergencia. Se avisó a los demás cuidadores.")
+                }
+                onSuccess()
+            } else {
+                _uiState.update { it.copy(isLoading = false, errorMessage = "No se pudo atender la emergencia. Intenta de nuevo.") }
+            }
+        }
+    }
+
     fun clearActionMessage() {
         _uiState.update { it.copy(actionMessage = null) }
     }

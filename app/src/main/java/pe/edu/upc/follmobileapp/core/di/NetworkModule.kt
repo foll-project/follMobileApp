@@ -8,8 +8,15 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 
 object NetworkModule {
-    // 10.0.2.2 is the special IP address that routes to the host machine's localhost from Android Emulator.
-    private const val BASE_URL = "https://foll-backend-iot-h5hkb3czhwedhph0.brazilsouth-01.azurewebsites.net/"
+    // ─── Configuración del servidor ───────────────────────────────────────────
+    // Para cambiar el entorno, modifica únicamente esta constante:
+    //   • Emulador Android  → "http://10.0.2.2:5237/"
+    //   • Dispositivo físico → "http://<IP-LAN-de-tu-PC>:5237/"  (ej. "http://192.168.1.100:5237/")
+    //   • Producción (Azure) → "https://foll-backend-iot-h5hkb3czhwedhph0.brazilsouth-01.azurewebsites.net/"
+    //
+    // Esta misma URL la reutiliza el WebSocket (SignalR) en tiempo real, así que
+    // SOLO se cambia aquí para TODA la app (HTTP + WebSockets).
+    const val BASE_URL = "http://10.0.2.2:5237/"
 
     @Volatile
     private var retrofit: Retrofit? = null

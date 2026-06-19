@@ -7,7 +7,9 @@ import pe.edu.upc.follmobileapp.features.care.data.local.dao.PatientDao
 import pe.edu.upc.follmobileapp.features.emergency.data.local.dao.FallEventDao
 import pe.edu.upc.follmobileapp.features.emergency.data.local.models.FallEventEntity
 import pe.edu.upc.follmobileapp.features.emergency.data.remote.models.PushTokenRequest
+import pe.edu.upc.follmobileapp.features.emergency.data.remote.models.ResolveIncidentRequest
 import pe.edu.upc.follmobileapp.features.emergency.data.remote.services.EmergencyApiService
+import retrofit2.HttpException
 import pe.edu.upc.follmobileapp.features.emergency.domain.models.EmergencyAlert
 import pe.edu.upc.follmobileapp.features.emergency.domain.models.FallIncident
 import pe.edu.upc.follmobileapp.features.emergency.domain.repository.EmergencyRepository
@@ -85,8 +87,11 @@ class EmergencyRepositoryImpl(
     }
 
     override suspend fun syncAlerts(): Result<Unit> = runCatching {
+        val localById = fallEventDao.getAllOnce().associateBy { it.notificationLogId }
         val remoteAlerts = apiService.getNotifications()
+
         val entities = remoteAlerts.map { dto ->
+            val local = localById[dto.notificationLogId ?: 0L]
             FallEventEntity(
                 notificationLogId = dto.notificationLogId ?: 0L,
                 userId = dto.userId ?: 0,
@@ -102,20 +107,107 @@ class EmergencyRepositoryImpl(
                 deviceId = dto.deviceId,
                 sentAt = dto.sentAt,
                 readAt = dto.readAt,
-                acknowledgedAt = dto.acknowledgedAt,
+                acknowledgedAt = mergeAcknowledgedAt(dto.acknowledgedAt, local?.acknowledgedAt),
                 createdAt = dto.createdAt ?: "",
                 updatedAt = dto.updatedAt
             )
         }
         fallEventDao.saveAlerts(entities)
+
+        // Si el incidente ya fue cerrado (atendido en web/mobile/otro cuidador) pero la
+        // notificación remota sigue sin acknowledgedAt, alineamos el estado local.
+        reconcileAttendedFallsWithBackend()
     }
 
     override suspend fun acknowledgeAlert(notificationId: Long): Result<Unit> = runCatching {
         apiService.acknowledgeNotification(notificationId)
-        val nowIso = SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
+        fallEventDao.updateAcknowledge(notificationId, currentUtcIso())
+    }
+
+    override suspend fun attendFall(patientId: Long): Result<Unit> = runCatching {
+        // 1) Buscar el incidente activo del paciente. Si ya no hay (404), alguien más lo atendió.
+        val activeIncident = try {
+            apiService.getActiveIncident(patientId)
+        } catch (e: HttpException) {
+            if (e.code() == 404) null else throw e
+        }
+
+        // 2) Cerrar el incidente (Resolved). Esto dispara el aviso en tiempo real a los demás.
+        //    Si otro cuidador lo cerró justo antes (404/400), lo tratamos como "ya atendida".
+        if (activeIncident != null && activeIncident.incidentId > 0) {
+            try {
+                apiService.resolveIncident(
+                    activeIncident.incidentId,
+                    ResolveIncidentRequest("Atendido desde la app móvil")
+                )
+            } catch (e: HttpException) {
+                if (e.code() != 404 && e.code() != 400) throw e
+            }
+        }
+
+        // 3) Confirmar en el backend las notificaciones de caída (para que el próximo sync
+        //    no las traiga otra vez como "activas"). Resolver el incidente NO marca la notificación.
+        acknowledgeRemoteNotificationsForPatient(patientId)
+
+        // 4) Marcar localmente como atendidas para que la alerta desaparezca al instante.
+        markFallsAttended(patientId)
+    }
+
+    override suspend fun markPatientFallsAttendedLocally(patientId: Long): Result<Unit> = runCatching {
+        markFallsAttended(patientId)
+    }
+
+    private suspend fun markFallsAttended(patientId: Long) {
+        val nowIso = currentUtcIso()
+        fallEventDao.acknowledgeFallsByPatient(patientId, nowIso)
+    }
+
+    /**
+     * Marca en el servidor las notificaciones FallDetected sin confirmar de un paciente.
+     * Best-effort: si otra sesión ya las confirmó, ignoramos 400/404.
+     */
+    private suspend fun acknowledgeRemoteNotificationsForPatient(patientId: Long) {
+        val pending = fallEventDao.getUnacknowledgedFallsByPatient(patientId)
+        pending.forEach { event ->
+            try {
+                apiService.acknowledgeNotification(event.notificationLogId)
+            } catch (e: HttpException) {
+                if (e.code() != 400 && e.code() != 404) throw e
+            }
+        }
+    }
+
+    /**
+     * Tras sincronizar, si un paciente tiene caídas "activas" en Room pero el backend
+     * ya no tiene incidente abierto, las marcamos como atendidas (p. ej. atendió otro
+     * cuidador o se cerró desde la web).
+     */
+    private suspend fun reconcileAttendedFallsWithBackend() {
+        val patientIds = fallEventDao.getPatientIdsWithUnacknowledgedFalls()
+        for (patientId in patientIds) {
+            val hasActiveIncident = try {
+                apiService.getActiveIncident(patientId)
+                true
+            } catch (e: HttpException) {
+                if (e.code() == 404) false else continue
+            }
+
+            if (!hasActiveIncident) {
+                acknowledgeRemoteNotificationsForPatient(patientId)
+                markFallsAttended(patientId)
+            }
+        }
+    }
+
+    /** Conserva acknowledgedAt local si el remoto aún no lo trae (evita regresiones tras sync). */
+    private fun mergeAcknowledgedAt(remote: String?, local: String?): String? {
+        return remote?.takeIf { it.isNotBlank() } ?: local?.takeIf { it.isNotBlank() }
+    }
+
+    private fun currentUtcIso(): String {
+        return SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'", Locale.US).apply {
             timeZone = TimeZone.getTimeZone("UTC")
         }.format(Date())
-        fallEventDao.updateAcknowledge(notificationId, nowIso)
     }
 
     override suspend fun registerPushToken(token: String): Result<Unit> = runCatching {

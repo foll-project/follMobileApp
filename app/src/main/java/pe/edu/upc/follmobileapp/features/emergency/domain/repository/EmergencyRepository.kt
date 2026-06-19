@@ -9,6 +9,14 @@ interface EmergencyRepository {
     fun getIncidentsFlow(): Flow<List<FallIncident>>
     suspend fun syncAlerts(): Result<Unit>
     suspend fun acknowledgeAlert(notificationId: Long): Result<Unit>
+
+    /**
+     * Atiende la caída activa de un paciente: cierra el incidente en el backend
+     * (Resolved) y marca localmente las alertas como atendidas. El backend
+     * notifica en tiempo real a los demás cuidadores quién la atendió.
+     */
+    suspend fun attendFall(patientId: Long): Result<Unit>
+    suspend fun markPatientFallsAttendedLocally(patientId: Long): Result<Unit>
     suspend fun registerPushToken(token: String): Result<Unit>
     suspend fun saveObservations(incidentId: Long, observations: String): Result<Unit>
 }

@@ -44,6 +44,7 @@ class CareViewModel(
     init {
         observePatients()
         syncPatientsFromRemote()
+        syncAlertsFromRemote()
     }
 
     private fun observePatients() {
@@ -86,6 +87,13 @@ class CareViewModel(
                 }
             }
             _uiState.update { it.copy(isLoading = false) }
+        }
+    }
+
+    /** Sincroniza alertas de caída al abrir Mis Abuelitos (alinea Room con el backend). */
+    fun syncAlertsFromRemote() {
+        viewModelScope.launch {
+            emergencyRepository.syncAlerts()
         }
     }
 

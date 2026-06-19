@@ -24,6 +24,13 @@ interface PatientRepository {
         medications: List<String>
     ): Result<Unit>
     suspend fun deletePatientLocally(id: Long): Result<Unit>
+    suspend fun updateDeviceTelemetry(
+        patientId: Long,
+        batteryLevel: Int,
+        isCharging: Boolean,
+        isOnline: Boolean,
+        lastHeartbeatAt: String?
+    ): Result<Unit>
     suspend fun addAnnotation(patientId: Long, content: String): Result<Unit>
     suspend fun getCaregivers(patientId: Long): Result<List<Caregiver>>
     suspend fun changeGuardian(patientId: Long, newCurrentGuardianUserId: Int): Result<Unit>

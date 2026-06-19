@@ -135,7 +135,7 @@ object PatientMapper {
         )
     }
 
-    private fun formatUltimoReporte(fecha: String): String {
+    fun formatUltimoReporte(fecha: String): String {
         try {
             val formats = listOf(
                 "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
@@ -295,6 +295,26 @@ class PatientRepositoryImpl(
 
     override suspend fun deletePatientLocally(id: Long): Result<Unit> = runCatching {
         localDataSource.deletePatient(id)
+    }
+
+    override suspend fun updateDeviceTelemetry(
+        patientId: Long,
+        batteryLevel: Int,
+        isCharging: Boolean,
+        isOnline: Boolean,
+        lastHeartbeatAt: String?
+    ): Result<Unit> = runCatching {
+        val localPatient = localDataSource.getPatientById(patientId) ?: return@runCatching
+        val currentDevice = localPatient.device ?: return@runCatching
+
+        val updatedDevice = currentDevice.copy(
+            batteryPercentage = batteryLevel,
+            isCharging = isCharging,
+            status = if (isOnline) "Online" else "Offline",
+            ultimoReporte = lastHeartbeatAt?.let { PatientMapper.formatUltimoReporte(it) } ?: "Hace instantes"
+        )
+
+        localDataSource.savePatient(localPatient.copy(device = updatedDevice))
     }
 
     override suspend fun addAnnotation(patientId: Long, content: String): Result<Unit> = runCatching {
