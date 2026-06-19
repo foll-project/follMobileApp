@@ -1,10 +1,11 @@
 package pe.edu.upc.follmobileapp.features.care.presentation.viewmodels
 
 import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import pe.edu.upc.follmobileapp.features.care.domain.repository.PatientRepository
+import pe.edu.upc.follmobileapp.features.iam.domain.repository.AuthRepository
 
 data class CrearAbuelitoUiState(
     val nombre: String = "",
@@ -19,15 +20,19 @@ data class CrearAbuelitoUiState(
     val enfermedadesError: String? = null,
     val medicamentos: String = "",
     val isFormValid: Boolean = false,
-    val isSaved: Boolean = false
+    val isSaved: Boolean = false,
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null
 )
 
-class CrearAbuelitoViewModel : ViewModel() {
+class CrearAbuelitoViewModel(
+    private val patientRepository: PatientRepository,
+    private val authRepository: AuthRepository
+) : ViewModel() {
     private val _uiState = MutableStateFlow(CrearAbuelitoUiState())
     val uiState: StateFlow<CrearAbuelitoUiState> = _uiState.asStateFlow()
 
     fun onNombreChange(newValue: String) {
-        // Nombres no pueden tener números
         val filtered = newValue.filter { !it.isDigit() }
         _uiState.update { state ->
             val newState = state.copy(nombre = filtered)
@@ -36,7 +41,6 @@ class CrearAbuelitoViewModel : ViewModel() {
     }
 
     fun onEdadChange(newValue: String) {
-        // Edad no puede tener letras, solo números
         val filtered = newValue.filter { it.isDigit() }
         _uiState.update { state ->
             val newState = state.copy(edad = filtered)
@@ -52,7 +56,6 @@ class CrearAbuelitoViewModel : ViewModel() {
     }
 
     fun onDniChange(newValue: String) {
-        // DNI no puede tener letras, solo números (máx 8 dígitos en Perú)
         val filtered = newValue.filter { it.isDigit() }.take(8)
         _uiState.update { state ->
             val newState = state.copy(dni = filtered)
@@ -136,12 +139,33 @@ class CrearAbuelitoViewModel : ViewModel() {
     }
 
     fun saveAbuelito() {
-        _uiState.update { state ->
-            val finalState = validateAll(state)
-            if (finalState.isFormValid) {
-                finalState.copy(isSaved = true)
+        val state = _uiState.value
+        val finalState = validateAll(state)
+        if (!finalState.isFormValid) {
+            _uiState.value = finalState
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            val illnessesList = state.enfermedades.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            val medicationsList = state.medicamentos.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+
+            val result = patientRepository.createPatient(
+                dni = state.dni,
+                name = state.nombre,
+                bloodType = state.grupoSanguineo,
+                illnesses = illnessesList,
+                medications = medicationsList
+            )
+
+            if (result.isSuccess) {
+                authRepository.getLoggedInUser().firstOrNull()?.let { user ->
+                    patientRepository.syncPatients(user.userId)
+                }
+                _uiState.update { it.copy(isSaved = true, isLoading = false) }
             } else {
-                finalState
+                _uiState.update { it.copy(isLoading = false, errorMessage = "Error al registrar el abuelito en el servidor") }
             }
         }
     }

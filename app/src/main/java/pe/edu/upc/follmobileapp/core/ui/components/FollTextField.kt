@@ -27,6 +27,7 @@ fun FollTextField(
     isPassword: Boolean = false,
     isError: Boolean = false,
     errorMessage: String? = null,
+    enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     var passwordVisible by remember { mutableStateOf(false) }
@@ -41,6 +42,7 @@ fun FollTextField(
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
+            enabled = enabled,
             placeholder = { Text(placeholder, color = Color.Gray.copy(alpha = 0.5f)) },
             isError = isError,
             visualTransformation = if (isPassword && !passwordVisible) PasswordVisualTransformation() else VisualTransformation.None,

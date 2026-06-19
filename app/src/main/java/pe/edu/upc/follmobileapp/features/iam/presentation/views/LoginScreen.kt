@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
@@ -20,13 +21,18 @@ import pe.edu.upc.follmobileapp.core.navigation.Routes
 import pe.edu.upc.follmobileapp.core.ui.components.FollButton
 import pe.edu.upc.follmobileapp.core.ui.components.FollTextField
 import pe.edu.upc.follmobileapp.core.ui.theme.FollDarkBlue
+import pe.edu.upc.follmobileapp.features.iam.data.di.DataModule
 import pe.edu.upc.follmobileapp.features.iam.presentation.viewmodels.LoginViewModel
+import pe.edu.upc.follmobileapp.features.iam.presentation.viewmodels.LoginViewModelFactory
 
 @Composable
 fun LoginScreen(
-    navController: NavController,
-    viewModel: LoginViewModel = viewModel()
+    navController: NavController
 ) {
+    val context = LocalContext.current
+    val viewModel: LoginViewModel = viewModel(
+        factory = LoginViewModelFactory(DataModule.provideAuthRepository(context))
+    )
     val uiState by viewModel.uiState.collectAsState()
 
     val backgroundGradient = Brush.linearGradient(
@@ -64,13 +70,24 @@ fun LoginScreen(
                 Column(
                     modifier = Modifier.padding(horizontal = 32.dp, vertical = 40.dp)
                 ) {
+                    if (uiState.errorMessage != null) {
+                        Text(
+                            text = uiState.errorMessage!!,
+                            color = MaterialTheme.colorScheme.error,
+                            fontWeight = FontWeight.SemiBold,
+                            fontSize = 14.sp,
+                            modifier = Modifier.padding(bottom = 16.dp)
+                        )
+                    }
+
                     FollTextField(
                         label = "Correo electrónico",
                         placeholder = "Correo electrónico",
                         value = uiState.email,
                         onValueChange = viewModel::onEmailChanged,
                         isError = uiState.emailError != null,
-                        errorMessage = uiState.emailError
+                        errorMessage = uiState.emailError,
+                        enabled = !uiState.isLoading
                     )
                     Spacer(modifier = Modifier.height(16.dp))
                     FollTextField(
@@ -80,15 +97,17 @@ fun LoginScreen(
                         onValueChange = viewModel::onPasswordChanged,
                         isPassword = true,
                         isError = uiState.passwordError != null,
-                        errorMessage = uiState.passwordError
+                        errorMessage = uiState.passwordError,
+                        enabled = !uiState.isLoading
                     )
 
                     Spacer(modifier = Modifier.height(40.dp))
 
                     FollButton(
-                        text = "Iniciar Sesión",
+                        text = if (uiState.isLoading) "Ingresando..." else "Iniciar Sesión",
+                        enabled = !uiState.isLoading,
                         onClick = {
-                            if (viewModel.validate()) {
+                            viewModel.login {
                                 navController.navigate(Routes.Dashboard.route) {
                                     popUpTo(Routes.Welcome.route) { inclusive = true }
                                 }
@@ -109,7 +128,7 @@ fun LoginScreen(
                             fontSize = 14.sp,
                             fontWeight = FontWeight.Bold,
                             textDecoration = TextDecoration.Underline,
-                            modifier = Modifier.clickable {
+                            modifier = Modifier.clickable(enabled = !uiState.isLoading) {
                                 navController.navigate(Routes.Register.route) {
                                     popUpTo(Routes.Welcome.route) { inclusive = false }
                                     launchSingleTop = true

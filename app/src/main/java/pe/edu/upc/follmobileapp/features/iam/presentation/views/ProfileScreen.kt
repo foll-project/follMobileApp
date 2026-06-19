@@ -37,11 +37,15 @@ import pe.edu.upc.follmobileapp.features.iam.presentation.viewmodels.ProfileView
 
 @Composable
 fun ProfileScreen(
-    navController: NavController,
-    viewModel: ProfileViewModel = viewModel()
+    navController: NavController
 ) {
-    val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
+    val viewModel: ProfileViewModel = viewModel(
+        factory = pe.edu.upc.follmobileapp.features.iam.presentation.viewmodels.ProfileViewModelFactory(
+            pe.edu.upc.follmobileapp.features.iam.data.di.DataModule.provideAuthRepository(context)
+        )
+    )
+    val uiState by viewModel.uiState.collectAsState()
 
     LaunchedEffect(uiState.actionMessage) {
         uiState.actionMessage?.let { message ->
@@ -77,7 +81,14 @@ fun ProfileScreen(
                         firstName = uiState.firstName,
                         lastName = uiState.lastName,
                         onNavigateToUpdate = { viewModel.navigateTo(ProfileSubScreen.UPDATE_DATA) },
-                        onNavigateToHelp = { viewModel.navigateTo(ProfileSubScreen.HELP_SUPPORT) }
+                        onNavigateToHelp = { viewModel.navigateTo(ProfileSubScreen.HELP_SUPPORT) },
+                        onLogout = {
+                            viewModel.logout {
+                                navController.navigate(pe.edu.upc.follmobileapp.core.navigation.Routes.Welcome.route) {
+                                    popUpTo(0) { inclusive = true }
+                                }
+                            }
+                        }
                     )
                 }
                 ProfileSubScreen.UPDATE_DATA -> {
@@ -111,7 +122,8 @@ fun ProfileMainContent(
     firstName: String,
     lastName: String,
     onNavigateToUpdate: () -> Unit,
-    onNavigateToHelp: () -> Unit
+    onNavigateToHelp: () -> Unit,
+    onLogout: () -> Unit
 ) {
     Column(
         modifier = Modifier
@@ -171,7 +183,7 @@ fun ProfileMainContent(
 
         // Botón Cerrar Sesión
         TextButton(
-            onClick = { /* Lógica de Cerrar Sesión */ },
+            onClick = onLogout,
             modifier = Modifier.padding(bottom = 32.dp)
         ) {
             Icon(Icons.AutoMirrored.Filled.ExitToApp, contentDescription = null, tint = FollDarkBlue)

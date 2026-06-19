@@ -26,6 +26,7 @@ import pe.edu.upc.follmobileapp.core.ui.components.FollBottomBar
 import pe.edu.upc.follmobileapp.core.ui.components.FollTopBar
 import pe.edu.upc.follmobileapp.core.ui.theme.*
 import pe.edu.upc.follmobileapp.features.care.presentation.viewmodels.AnotacionesViewModel
+import pe.edu.upc.follmobileapp.features.care.presentation.viewmodels.AnotacionesViewModelFactory
 import pe.edu.upc.follmobileapp.features.care.presentation.viewmodels.AnnotationUiModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -33,7 +34,7 @@ import pe.edu.upc.follmobileapp.features.care.presentation.viewmodels.Annotation
 fun AnotacionesScreen(
     navController: NavController,
     patientId: Long,
-    viewModel: AnotacionesViewModel = viewModel()
+    viewModel: AnotacionesViewModel = viewModel(factory = AnotacionesViewModelFactory(LocalContext.current))
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current

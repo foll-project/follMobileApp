@@ -22,23 +22,41 @@ import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
+import android.widget.Toast
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import pe.edu.upc.follmobileapp.core.ui.theme.*
 import pe.edu.upc.follmobileapp.features.emergency.presentation.viewmodels.AlertViewModel
+import pe.edu.upc.follmobileapp.features.emergency.presentation.viewmodels.AlertViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AlertDetailScreen(
     navController: NavController,
     alertId: Long,
-    viewModel: AlertViewModel = viewModel()
+    viewModel: AlertViewModel = viewModel(factory = AlertViewModelFactory(LocalContext.current))
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val alert = uiState.alerts.firstOrNull { it.id == alertId }
     val uriHandler = LocalUriHandler.current
     var showMedicalDialog by remember { mutableStateOf(false) }
+    var showAttendDialog by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+
+    LaunchedEffect(uiState.actionMessage) {
+        uiState.actionMessage?.let { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+            viewModel.clearActionMessage()
+        }
+    }
+
+    LaunchedEffect(uiState.errorMessage) {
+        uiState.errorMessage?.let { err ->
+            Toast.makeText(context, err, Toast.LENGTH_SHORT).show()
+        }
+    }
 
     // Gradiente premium suave, llamativo pero reconfortante y profesional (arena, coral pastel y blanco)
     val backgroundGradient = Brush.linearGradient(
@@ -335,30 +353,49 @@ fun AlertDetailScreen(
 
                     Spacer(modifier = Modifier.height(16.dp))
 
-                    // Botón Voy en camino
+                    // Botón ATENDER: cierra el incidente y avisa en tiempo real a los demás cuidadores
                     Button(
-                        onClick = { /* Lógica de aviso */ },
+                        onClick = { showAttendDialog = true },
+                        enabled = !uiState.isLoading,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(56.dp),
+                            .height(56.dp)
+                            .shadow(4.dp, RoundedCornerShape(28.dp), ambientColor = FollDarkBlue, spotColor = FollDarkBlue),
                         colors = ButtonDefaults.buttonColors(containerColor = FollPaleYellow),
-                        border = BorderStroke(1.dp, FollDarkBlue),
+                        border = BorderStroke(1.5.dp, FollDarkBlue),
                         shape = RoundedCornerShape(28.dp)
                     ) {
-                        Icon(
-                            imageVector = Icons.Default.DirectionsRun,
-                            contentDescription = null,
-                            tint = FollDarkBlue,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "¡VOY EN CAMINO!",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = FollDarkBlue
-                        )
+                        if (uiState.isLoading) {
+                            CircularProgressIndicator(
+                                color = FollDarkBlue,
+                                strokeWidth = 2.5.dp,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Default.CheckCircle,
+                                contentDescription = null,
+                                tint = FollDarkBlue,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Spacer(modifier = Modifier.width(10.dp))
+                            Text(
+                                text = "ATENDER EMERGENCIA",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = FollDarkBlue
+                            )
+                        }
                     }
+
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Text(
+                        text = "Al atender, se cerrará la alerta y se avisará a los demás cuidadores.",
+                        fontSize = 12.sp,
+                        color = FollDarkGray,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                    )
 
                     Spacer(modifier = Modifier.height(32.dp))
                 }
@@ -491,6 +528,67 @@ fun AlertDetailScreen(
                     shape = RoundedCornerShape(20.dp)
                 ) {
                     Text("Cerrar", fontWeight = FontWeight.Bold)
+                }
+            },
+            shape = RoundedCornerShape(28.dp),
+            containerColor = Color.White
+        )
+    }
+
+    // Confirmación para ATENDER la emergencia
+    if (showAttendDialog && alert != null) {
+        AlertDialog(
+            onDismissRequest = { showAttendDialog = false },
+            icon = {
+                Surface(
+                    shape = CircleShape,
+                    color = Color(0xFF2E7D32).copy(alpha = 0.12f),
+                    modifier = Modifier.size(52.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.VolunteerActivism,
+                        contentDescription = null,
+                        tint = Color(0xFF2E7D32),
+                        modifier = Modifier.padding(12.dp)
+                    )
+                }
+            },
+            title = {
+                Text(
+                    text = "¿Atender esta emergencia?",
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = FollDarkBlue,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            text = {
+                Text(
+                    text = "Confirmas que tú te haces cargo de la caída de ${alert.patientName}. La alerta se cerrará y se avisará en tiempo real a los demás cuidadores que TÚ la estás atendiendo.",
+                    fontSize = 15.sp,
+                    color = Color.Black,
+                    lineHeight = 21.sp,
+                    textAlign = TextAlign.Center
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showAttendDialog = false
+                        viewModel.attendAlert(alert.patientId) {
+                            navController.popBackStack()
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
+                    shape = RoundedCornerShape(20.dp)
+                ) {
+                    Text("Sí, la atiendo", fontWeight = FontWeight.Bold, color = Color.White)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAttendDialog = false }) {
+                    Text("Cancelar", fontWeight = FontWeight.Bold, color = FollDarkGray)
                 }
             },
             shape = RoundedCornerShape(28.dp),

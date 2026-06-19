@@ -17,10 +17,12 @@ import pe.edu.upc.follmobileapp.core.ui.theme.FollDarkBlue
 fun FollButton(
     text: String,
     onClick: () -> Unit,
+    enabled: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     Button(
         onClick = onClick,
+        enabled = enabled,
         modifier = modifier
             .fillMaxWidth()
             .height(56.dp),

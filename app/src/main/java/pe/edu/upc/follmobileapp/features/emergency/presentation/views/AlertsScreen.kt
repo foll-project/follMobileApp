@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
@@ -28,11 +29,12 @@ import pe.edu.upc.follmobileapp.core.ui.components.FollBottomBar
 import pe.edu.upc.follmobileapp.core.ui.theme.*
 import pe.edu.upc.follmobileapp.core.ui.components.FollTopBar
 import pe.edu.upc.follmobileapp.features.emergency.presentation.viewmodels.AlertViewModel
+import pe.edu.upc.follmobileapp.features.emergency.presentation.viewmodels.AlertViewModelFactory
 
 @Composable
 fun AlertsScreen(
     navController: NavController,
-    viewModel: AlertViewModel = viewModel()
+    viewModel: AlertViewModel = viewModel(factory = AlertViewModelFactory(LocalContext.current))
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val backgroundGradient = Brush.linearGradient(

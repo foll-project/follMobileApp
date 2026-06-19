@@ -1,10 +1,12 @@
 package pe.edu.upc.follmobileapp.features.care.presentation.viewmodels
 
 import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import pe.edu.upc.follmobileapp.features.care.domain.repository.PatientRepository
+import pe.edu.upc.follmobileapp.features.care.domain.models.DeviceInfo
+import pe.edu.upc.follmobileapp.features.devicemanagement.domain.repository.DeviceRepository
 
 data class AbuelitoDetailUiState(
     val patientId: Long = 0L,
@@ -22,64 +24,55 @@ data class AbuelitoDetailUiState(
     val isEditMode: Boolean = false,
     val isFormValid: Boolean = true,
     val isSaved: Boolean = false,
-    val isDeleted: Boolean = false
+    val isDeleted: Boolean = false,
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null,
+    val device: DeviceInfo? = null,
+    val actionMessage: String? = null
 )
 
-class AbuelitoDetailViewModel : ViewModel() {
+class AbuelitoDetailViewModel(
+    private val patientRepository: PatientRepository,
+    private val deviceRepository: DeviceRepository
+) : ViewModel() {
     private val _uiState = MutableStateFlow(AbuelitoDetailUiState())
     val uiState: StateFlow<AbuelitoDetailUiState> = _uiState.asStateFlow()
 
-    // Cargar datos mock según el id del abuelito
+    private var patientObserveJob: kotlinx.coroutines.Job? = null
+
     fun loadPatient(patientId: Long) {
-        if (_uiState.value.patientId != 0L) return // Evitar recarga si ya tiene datos
+        if (_uiState.value.patientId == patientId) return
 
-        val patientName = when (patientId) {
-            1L -> "Carmen Rosa"
-            2L -> "Don Roberto"
-            3L -> "Elena Soto"
-            else -> "Carmen Rosa"
-        }
-        val patientEdad = when (patientId) {
-            1L -> "85"
-            2L -> "82"
-            3L -> "79"
-            else -> "85"
-        }
-        val patientGrupo = when (patientId) {
-            1L -> "O+"
-            2L -> "A+"
-            3L -> "B-"
-            else -> "O+"
-        }
-        val patientDni = when (patientId) {
-            1L -> "17708023"
-            2L -> "09871234"
-            3L -> "23456789"
-            else -> "17708023"
-        }
-        val patientEnfermedades = when (patientId) {
-            1L -> "Hipertensión"
-            2L -> "Artrosis"
-            3L -> "Diabetes"
-            else -> "Hipertensión"
-        }
-        val patientMedicamentos = when (patientId) {
-            1L -> "Losartán 50mg"
-            2L -> "Paracetamol"
-            3L -> "Metformina"
-            else -> "Losartán 50mg"
+        patientObserveJob?.cancel()
+        patientObserveJob = viewModelScope.launch {
+            patientRepository.getPatientByIdFlow(patientId).collect { patient ->
+                if (patient != null) {
+                    _uiState.update { state ->
+                        if (!state.isEditMode) {
+                            state.copy(
+                                patientId = patientId,
+                                nombre = patient.fullName,
+                                edad = patient.age,
+                                grupoSanguineo = patient.bloodType,
+                                dni = patient.dni,
+                                enfermedades = patient.illnesses.joinToString(", "),
+                                medicamentos = patient.medications.joinToString(", "),
+                                device = patient.device
+                            )
+                        } else {
+                            state.copy(
+                                patientId = patientId,
+                                device = patient.device
+                            )
+                        }
+                    }
+                }
+            }
         }
 
-        _uiState.update {
-            it.copy(
-                patientId = patientId,
-                nombre = patientName,
-                edad = patientEdad,
-                grupoSanguineo = patientGrupo,
-                dni = patientDni,
-                enfermedades = patientEnfermedades,
-                medicamentos = patientMedicamentos
-            )
+        // Sync from server
+        viewModelScope.launch {
+            patientRepository.syncPatientDetails(patientId)
         }
     }
 
@@ -93,7 +86,6 @@ class AbuelitoDetailViewModel : ViewModel() {
         _uiState.update { state ->
             state.copy(isEditMode = false)
         }
-        // Restaurar valores anteriores al forzar recarga
         val originalId = _uiState.value.patientId
         _uiState.update { it.copy(patientId = 0L) }
         loadPatient(originalId)
@@ -164,12 +156,30 @@ class AbuelitoDetailViewModel : ViewModel() {
     }
 
     fun savePatient() {
-        _uiState.update { state ->
-            val finalState = validateFields(state)
-            if (finalState.isFormValid) {
-                finalState.copy(isSaved = true, isEditMode = false)
+        val state = _uiState.value
+        val finalState = validateFields(state)
+        if (!finalState.isFormValid) {
+            _uiState.value = finalState
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            val illnessesList = state.enfermedades.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+            val medicationsList = state.medicamentos.split(",").map { it.trim() }.filter { it.isNotEmpty() }
+
+            val result = patientRepository.updatePatient(
+                id = state.patientId,
+                name = state.nombre,
+                bloodType = state.grupoSanguineo,
+                illnesses = illnessesList,
+                medications = medicationsList
+            )
+
+            if (result.isSuccess) {
+                _uiState.update { it.copy(isSaved = true, isEditMode = false, isLoading = false) }
             } else {
-                finalState
+                _uiState.update { it.copy(isLoading = false, errorMessage = "Error al guardar los cambios en el servidor") }
             }
         }
     }
@@ -179,6 +189,44 @@ class AbuelitoDetailViewModel : ViewModel() {
     }
 
     fun deletePatient() {
-        _uiState.update { it.copy(isDeleted = true) }
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true) }
+            val result = patientRepository.deletePatientLocally(_uiState.value.patientId)
+            if (result.isSuccess) {
+                _uiState.update { it.copy(isDeleted = true, isLoading = false) }
+            } else {
+                _uiState.update { it.copy(isLoading = false, errorMessage = "Error al eliminar localmente") }
+            }
+        }
+    }
+
+    fun linkDevice(deviceId: Int) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            val result = deviceRepository.linkDevice(deviceId, _uiState.value.patientId)
+            if (result.isSuccess) {
+                patientRepository.syncPatientDetails(_uiState.value.patientId)
+                _uiState.update { it.copy(isLoading = false, actionMessage = "Dispositivo vinculado correctamente") }
+            } else {
+                _uiState.update { it.copy(isLoading = false, errorMessage = "Error al vincular el dispositivo") }
+            }
+        }
+    }
+
+    fun unlinkDevice(deviceId: Int) {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            val result = deviceRepository.unlinkDevice(deviceId)
+            if (result.isSuccess) {
+                patientRepository.syncPatientDetails(_uiState.value.patientId)
+                _uiState.update { it.copy(isLoading = false, actionMessage = "Dispositivo desvinculado correctamente") }
+            } else {
+                _uiState.update { it.copy(isLoading = false, errorMessage = "Error al desvincular el dispositivo") }
+            }
+        }
+    }
+
+    fun clearActionMessage() {
+        _uiState.update { it.copy(actionMessage = null) }
     }
 }

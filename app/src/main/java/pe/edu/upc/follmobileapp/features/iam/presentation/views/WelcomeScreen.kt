@@ -9,22 +9,44 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import pe.edu.upc.follmobileapp.core.navigation.Routes
 import pe.edu.upc.follmobileapp.core.ui.components.FollButton
 import pe.edu.upc.follmobileapp.core.ui.theme.FollDarkBlue
+import pe.edu.upc.follmobileapp.features.iam.data.di.DataModule
+import pe.edu.upc.follmobileapp.features.iam.presentation.viewmodels.WelcomeViewModel
+import pe.edu.upc.follmobileapp.features.iam.presentation.viewmodels.WelcomeViewModelFactory
 
 @Composable
 fun WelcomeScreen(navController: NavController) {
+    val context = LocalContext.current
+    val welcomeViewModel: WelcomeViewModel = viewModel(
+        factory = WelcomeViewModelFactory(DataModule.provideAuthRepository(context))
+    )
+    val loggedInUser by welcomeViewModel.loggedInUser.collectAsState(initial = null)
+
+    LaunchedEffect(loggedInUser) {
+        if (loggedInUser != null) {
+            navController.navigate(Routes.Dashboard.route) {
+                popUpTo(Routes.Welcome.route) { inclusive = true }
+            }
+        }
+    }
+
     val backgroundGradient = Brush.linearGradient(
-        colors = listOf(Color(0xFFF6F8A7), Color(0xFFCAEFE2), Color(0xFFFDF1), Color(0xFFFDF1), Color(0xFFFDF1))
+        colors = listOf(Color(0xFFF6F8A7), Color(0xFFCAEFE2), Color(0xFFFFFDF1), Color(0xFFFFFDF1), Color(0xFFFFFDF1))
     )
 
     Box(

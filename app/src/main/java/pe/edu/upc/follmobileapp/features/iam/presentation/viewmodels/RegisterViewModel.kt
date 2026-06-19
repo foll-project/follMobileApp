@@ -1,10 +1,14 @@
 package pe.edu.upc.follmobileapp.features.iam.presentation.viewmodels
 
 import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import pe.edu.upc.follmobileapp.features.iam.domain.models.RegisterData
+import pe.edu.upc.follmobileapp.features.iam.domain.repository.AuthRepository
 
 data class RegisterUiState(
     val firstName: String = "",
@@ -18,10 +22,15 @@ data class RegisterUiState(
     val password: String = "",
     val passwordError: String? = null,
     val confirmPassword: String = "",
-    val confirmPasswordError: String? = null
+    val confirmPasswordError: String? = null,
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null,
+    val isSuccess: Boolean = false
 )
 
-class RegisterViewModel : ViewModel() {
+class RegisterViewModel(
+    private val authRepository: AuthRepository
+) : ViewModel() {
     private val _uiState = MutableStateFlow(RegisterUiState())
     val uiState: StateFlow<RegisterUiState> = _uiState.asStateFlow()
 
@@ -90,7 +99,8 @@ class RegisterViewModel : ViewModel() {
             }
             state.copy(
                 firstName = value,
-                firstNameError = err
+                firstNameError = err,
+                errorMessage = null
             )
         }
     }
@@ -104,7 +114,8 @@ class RegisterViewModel : ViewModel() {
             }
             val step1 = state.copy(
                 lastName = value,
-                lastNameError = err
+                lastNameError = err,
+                errorMessage = null
             )
             validatePrecedingFields(2, step1)
         }
@@ -119,7 +130,8 @@ class RegisterViewModel : ViewModel() {
             }
             val step1 = state.copy(
                 email = value,
-                emailError = err
+                emailError = err,
+                errorMessage = null
             )
             validatePrecedingFields(3, step1)
         }
@@ -134,7 +146,8 @@ class RegisterViewModel : ViewModel() {
             }
             val step1 = state.copy(
                 phoneNumber = value,
-                phoneNumberError = err
+                phoneNumberError = err,
+                errorMessage = null
             )
             validatePrecedingFields(4, step1)
         }
@@ -144,7 +157,8 @@ class RegisterViewModel : ViewModel() {
         _uiState.update { state ->
             val step1 = state.copy(
                 password = value,
-                passwordError = if (value.isBlank()) "La contraseña es obligatoria" else null
+                passwordError = if (value.isBlank()) "La contraseña es obligatoria" else null,
+                errorMessage = null
             )
             val step2 = validatePrecedingFields(5, step1)
             if (step2.confirmPassword.isNotEmpty()) {
@@ -159,7 +173,8 @@ class RegisterViewModel : ViewModel() {
     fun onConfirmPasswordChanged(value: String) {
         _uiState.update { state ->
             val step1 = state.copy(
-                confirmPassword = value
+                confirmPassword = value,
+                errorMessage = null
             )
             val step2 = validatePrecedingFields(6, step1)
             val passwordsMatch = step2.password == value
@@ -218,5 +233,31 @@ class RegisterViewModel : ViewModel() {
             )
         }
         return isValid
+    }
+
+    fun register(onSuccess: () -> Unit) {
+        if (!validate()) return
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            val data = RegisterData(
+                email = uiState.value.email,
+                password = uiState.value.password,
+                firstName = uiState.value.firstName,
+                lastName = uiState.value.lastName,
+                phoneNumber = uiState.value.phoneNumber
+            )
+            val result = authRepository.register(data)
+            result.onSuccess {
+                _uiState.update { it.copy(isLoading = false, isSuccess = true) }
+                onSuccess()
+            }.onFailure { error ->
+                _uiState.update {
+                    it.copy(
+                        isLoading = false,
+                        errorMessage = error.message ?: "Error en el registro"
+                    )
+                }
+            }
+        }
     }
 }

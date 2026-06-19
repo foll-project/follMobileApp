@@ -32,17 +32,19 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import pe.edu.upc.follmobileapp.core.navigation.Routes
+import androidx.compose.ui.platform.LocalContext
 import pe.edu.upc.follmobileapp.core.ui.components.FollBottomBar
 import pe.edu.upc.follmobileapp.core.ui.components.FollTopBar
 import pe.edu.upc.follmobileapp.core.ui.theme.*
 import pe.edu.upc.follmobileapp.features.emergency.presentation.viewmodels.DashboardPatientState
 import pe.edu.upc.follmobileapp.features.emergency.presentation.viewmodels.DashboardViewModel
+import pe.edu.upc.follmobileapp.features.emergency.presentation.viewmodels.DashboardViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DashboardScreen(
     navController: NavController,
-    viewModel: DashboardViewModel = viewModel()
+    viewModel: DashboardViewModel = viewModel(factory = DashboardViewModelFactory(LocalContext.current))
 ) {
     val uiState by viewModel.uiState.collectAsState()
 

@@ -33,11 +33,12 @@ import pe.edu.upc.follmobileapp.core.ui.theme.*
 import pe.edu.upc.follmobileapp.features.emergency.domain.models.FallIncident
 import pe.edu.upc.follmobileapp.features.emergency.presentation.viewmodels.FallAnnotation
 import pe.edu.upc.follmobileapp.features.emergency.presentation.viewmodels.HistoryViewModel
+import pe.edu.upc.follmobileapp.features.emergency.presentation.viewmodels.HistoryViewModelFactory
 
 @Composable
 fun HistoryScreen(
     navController: NavController,
-    viewModel: HistoryViewModel = viewModel()
+    viewModel: HistoryViewModel = viewModel(factory = HistoryViewModelFactory(LocalContext.current))
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current

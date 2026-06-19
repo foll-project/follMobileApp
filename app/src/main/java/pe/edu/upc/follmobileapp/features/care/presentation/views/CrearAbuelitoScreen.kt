@@ -24,12 +24,13 @@ import pe.edu.upc.follmobileapp.core.ui.components.FollTextField
 import pe.edu.upc.follmobileapp.core.ui.components.FollTopBar
 import pe.edu.upc.follmobileapp.core.ui.theme.*
 import pe.edu.upc.follmobileapp.features.care.presentation.viewmodels.CrearAbuelitoViewModel
+import pe.edu.upc.follmobileapp.features.care.presentation.viewmodels.CrearAbuelitoViewModelFactory
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CrearAbuelitoScreen(
     navController: NavController,
-    viewModel: CrearAbuelitoViewModel = viewModel()
+    viewModel: CrearAbuelitoViewModel = viewModel(factory = CrearAbuelitoViewModelFactory(LocalContext.current))
 ) {
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current

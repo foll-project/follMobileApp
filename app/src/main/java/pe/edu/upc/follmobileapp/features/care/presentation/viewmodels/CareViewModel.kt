@@ -1,10 +1,13 @@
 package pe.edu.upc.follmobileapp.features.care.presentation.viewmodels
 
 import androidx.lifecycle.ViewModel
-import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
+import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
+import pe.edu.upc.follmobileapp.features.care.domain.models.Patient
+import pe.edu.upc.follmobileapp.features.care.domain.repository.PatientRepository
+import pe.edu.upc.follmobileapp.features.iam.domain.repository.AuthRepository
+import pe.edu.upc.follmobileapp.features.emergency.domain.repository.EmergencyRepository
 
 enum class CaregiverRole(val label: String) {
     OFFICIAL_GUARDIAN("Cuidador Principal"),
@@ -25,52 +28,73 @@ data class PatientUiModel(
 
 data class CareUiState(
     val patients: List<PatientUiModel> = emptyList(),
-    val expandedPatientIds: Set<Long> = emptySet()
+    val expandedPatientIds: Set<Long> = emptySet(),
+    val isLoading: Boolean = false,
+    val errorMessage: String? = null
 )
 
-class CareViewModel : ViewModel() {
+class CareViewModel(
+    private val patientRepository: PatientRepository,
+    private val authRepository: AuthRepository,
+    private val emergencyRepository: EmergencyRepository
+) : ViewModel() {
     private val _uiState = MutableStateFlow(CareUiState())
     val uiState: StateFlow<CareUiState> = _uiState.asStateFlow()
 
     init {
-        // Cargar data mock inicial simulando registros de base de datos
-        loadPatients()
+        observePatients()
+        syncPatientsFromRemote()
+        syncAlertsFromRemote()
     }
 
-    private fun loadPatients() {
-        val initialPatients = listOf(
-            PatientUiModel(
-                id = 1L,
-                name = "Carmen Rosa",
-                role = CaregiverRole.OFFICIAL_GUARDIAN,
-                deviceId = "HW-1001",
-                isDeviceOn = true,
-                batteryPercentage = 85,
-                isCharging = false,
-                isInEmergency = false
-            ),
-            PatientUiModel(
-                id = 2L,
-                name = "Don Roberto",
-                role = CaregiverRole.SECONDARY_GUARDIAN,
-                deviceId = "HW-1002",
-                isDeviceOn = true,
-                batteryPercentage = 42,
-                isCharging = true,
-                isInEmergency = true
-            ),
-            PatientUiModel(
-                id = 3L,
-                name = "Elena Soto",
-                role = CaregiverRole.INVITED_GUARDIAN,
-                deviceId = "HW-1003",
-                isDeviceOn = false,
-                batteryPercentage = 15,
-                isCharging = false,
-                isInEmergency = false
-            )
-        )
-        _uiState.update { it.copy(patients = initialPatients) }
+    private fun observePatients() {
+        viewModelScope.launch {
+            combine(
+                patientRepository.getPatientsFlow(),
+                emergencyRepository.getAlertsFlow()
+            ) { patientsList, activeAlerts ->
+                val emergencyPatientIds = activeAlerts.map { it.patientId }.toSet()
+                patientsList.map { patient ->
+                    val role = when (patient.caregiverKind) {
+                        "official" -> CaregiverRole.OFFICIAL_GUARDIAN
+                        "invited" -> CaregiverRole.INVITED_GUARDIAN
+                        else -> CaregiverRole.SECONDARY_GUARDIAN
+                    }
+                    PatientUiModel(
+                        id = patient.id,
+                        name = patient.fullName,
+                        role = role,
+                        deviceId = patient.device?.id ?: "Sin dispositivo",
+                        isDeviceOn = patient.device?.status == "Online",
+                        batteryPercentage = patient.device?.batteryPercentage ?: 0,
+                        isCharging = patient.device?.isCharging ?: false,
+                        isInEmergency = emergencyPatientIds.contains(patient.id)
+                    )
+                }
+            }.collect { uiPatients ->
+                _uiState.update { it.copy(patients = uiPatients) }
+            }
+        }
+    }
+
+    fun syncPatientsFromRemote() {
+        viewModelScope.launch {
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            authRepository.getLoggedInUser().firstOrNull()?.let { user ->
+                val result = patientRepository.syncPatients(user.userId)
+                if (result.isFailure) {
+                    _uiState.update { it.copy(errorMessage = "Error de sincronización con el servidor") }
+                }
+            }
+            _uiState.update { it.copy(isLoading = false) }
+        }
+    }
+
+    /** Sincroniza alertas de caída al abrir Mis Abuelitos (alinea Room con el backend). */
+    fun syncAlertsFromRemote() {
+        viewModelScope.launch {
+            emergencyRepository.syncAlerts()
+        }
     }
 
     fun togglePatientExpansion(patientId: Long) {
