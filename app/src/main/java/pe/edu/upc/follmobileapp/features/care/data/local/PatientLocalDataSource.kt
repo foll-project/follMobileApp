@@ -28,4 +28,8 @@ class PatientLocalDataSource(
     suspend fun clearPatients() {
         patientDao.clearPatients()
     }
+
+    suspend fun syncPatientsData(patients: List<PatientEntity>) {
+        patientDao.syncPatientsData(patients)
+    }
 }

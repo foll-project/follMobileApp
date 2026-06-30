@@ -4,10 +4,13 @@ import android.content.Context
 import kotlinx.coroutines.flow.Flow
 import pe.edu.upc.follmobileapp.features.iam.data.local.dao.UserDao
 import pe.edu.upc.follmobileapp.features.iam.data.local.models.UserEntity
+import pe.edu.upc.follmobileapp.core.data.local.database.FollDatabase
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 
 class AuthLocalDataSource(
     private val userDao: UserDao,
-    context: Context
+    private val context: Context
 ) {
     private val sharedPrefs = context.getSharedPreferences("auth_prefs", Context.MODE_PRIVATE)
 
@@ -17,7 +20,9 @@ class AuthLocalDataSource(
     }
 
     suspend fun clearSession() {
-        userDao.deleteUser()
+        withContext(Dispatchers.IO) {
+            FollDatabase.getDatabase(context).clearAllTables()
+        }
         sharedPrefs.edit().remove("auth_token").apply()
     }
 

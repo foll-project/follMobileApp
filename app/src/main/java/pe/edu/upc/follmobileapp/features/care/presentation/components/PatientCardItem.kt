@@ -345,46 +345,52 @@ fun PatientCardItem(
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Text(
-                        text = "Escanea este código para vincular a tu abuelito o consultar su ficha médica rápida.",
+                        text = "Escanea este código desde la app móvil del nuevo cuidador para vincularlo instantáneamente a este paciente.",
                         fontSize = 14.sp,
                         color = FollDarkGray,
                         modifier = Modifier.padding(bottom = 16.dp)
                     )
                     
+                    Text(
+                        text = "foll:patient:${patient.id}",
+                        fontSize = 10.sp,
+                        color = Color.Gray,
+                        fontWeight = FontWeight.Light,
+                        modifier = Modifier.padding(bottom = 8.dp)
+                    )
+                    
+                    val qrContent = "foll:patient:${patient.id}"
+                    val qrMatrix = remember(qrContent) {
+                        try {
+                            val writer = com.google.zxing.qrcode.QRCodeWriter()
+                            // Genera una matriz lógica (los píxeles activos) sin escalado prematuro
+                            writer.encode(qrContent, com.google.zxing.BarcodeFormat.QR_CODE, 512, 512)
+                        } catch (e: Exception) {
+                            null
+                        }
+                    }
+
                     Canvas(
                         modifier = Modifier
-                            .size(160.dp)
+                            .size(200.dp) // Tamaño adecuado para lectura
                             .background(Color.White, shape = RoundedCornerShape(8.dp))
-                            .padding(8.dp)
+                            .padding(16.dp) // Zona de Silencio (Quiet Zone) requerida por el estándar
                     ) {
-                        val sizeX = 8
-                        val sizeY = 8
-                        val cellWidth = size.width / sizeX
-                        val cellHeight = size.height / sizeY
-                        
-                        val qrSeed = patient.name.hashCode() + patient.id.toInt()
-                        val random = java.util.Random(qrSeed.toLong())
-                        
-                        for (x in 0 until sizeX) {
-                            for (y in 0 until sizeY) {
-                                val isFinderPattern = (x < 3 && y < 3) || (x >= sizeX - 3 && y < 3) || (x < 3 && y >= sizeY - 3)
-                                val isBlack = if (isFinderPattern) {
-                                    (x == 0 || x == 2 || y == 0 || y == 2) || 
-                                    (x == sizeX - 1 || x == sizeX - 3 || y == 0 || y == 2) ||
-                                    (x == 0 || x == 2 || y == sizeY - 1 || y == sizeY - 3) ||
-                                    (x == 1 && y == 1) ||
-                                    (x == sizeX - 2 && y == 1) ||
-                                    (x == 1 && y == sizeY - 2)
-                                } else {
-                                    random.nextBoolean()
-                                }
-                                
-                                if (isBlack) {
-                                    drawRect(
-                                        color = FollDarkBlue,
-                                        topLeft = Offset(x * cellWidth, y * cellHeight),
-                                        size = Size(cellWidth + 0.5f, cellHeight + 0.5f)
-                                    )
+                        qrMatrix?.let { matrix ->
+                            val width = matrix.width
+                            val height = matrix.height
+                            val cellWidth = size.width / width
+                            val cellHeight = size.height / height
+
+                            for (x in 0 until width) {
+                                for (y in 0 until height) {
+                                    if (matrix.get(x, y)) {
+                                        drawRect(
+                                            color = Color.Black, // Forzar color negro estricto para máximo contraste
+                                            topLeft = Offset(x * cellWidth, y * cellHeight),
+                                            size = Size(cellWidth + 0.5f, cellHeight + 0.5f) // El +0.5f evita huecos por anti-aliasing
+                                        )
+                                    }
                                 }
                             }
                         }

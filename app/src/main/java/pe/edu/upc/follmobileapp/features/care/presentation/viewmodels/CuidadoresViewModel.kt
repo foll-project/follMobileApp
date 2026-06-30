@@ -17,7 +17,6 @@ data class CuidadoresUiState(
     val patientId: Long = 0L,
     val patientName: String = "",
     val currentUserRole: CaregiverRole = CaregiverRole.SECONDARY_GUARDIAN,
-    val caregivers: List<CaregiverUiModel> = emptyList(),
     val emergencyContacts: List<EmergencyContact> = emptyList(),
     val actionMessage: String? = null,
     val isLoading: Boolean = false,
@@ -25,122 +24,145 @@ data class CuidadoresUiState(
 )
 
 class CuidadoresViewModel(
-    private val patientRepository: PatientRepository
+    private val patientId: Long,
+    private val repository: PatientRepository
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(CuidadoresUiState())
-    val uiState: StateFlow<CuidadoresUiState> = _uiState.asStateFlow()
+    
+    private val _isLoading = MutableStateFlow(false)
+    private val _actionMessage = MutableStateFlow<String?>(null)
 
-    private var patientObserveJob: kotlinx.coroutines.Job? = null
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val uiState: StateFlow<CuidadoresUiState> = combine(
+        repository.getPatientByIdFlow(patientId),
+        _isLoading,
+        _actionMessage
+    ) { patient, isLoading, actionMessage ->
+        if (patient != null) {
+            val currentUserRole = when (patient.caregiverKind) {
+                "official" -> CaregiverRole.OFFICIAL_GUARDIAN
+                "invited_primary" -> CaregiverRole.INVITED_GUARDIAN
+                else -> CaregiverRole.SECONDARY_GUARDIAN
+            }
+            CuidadoresUiState(
+                patientId = patient.id,
+                patientName = patient.fullName,
+                currentUserRole = currentUserRole,
+                emergencyContacts = patient.emergencyContacts,
+                isLoading = isLoading,
+                actionMessage = actionMessage
+            )
+        } else {
+            CuidadoresUiState(isLoading = isLoading, actionMessage = actionMessage)
+        }
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = CuidadoresUiState()
+    )
+
+    val caregivers = repository.getCaregiversByPatientId(patientId).stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
     fun loadCaregivers(patientId: Long) {
-        if (_uiState.value.patientId == patientId) return
-
-        patientObserveJob?.cancel()
-        patientObserveJob = viewModelScope.launch {
-            patientRepository.getPatientByIdFlow(patientId).collect { patient ->
-                if (patient != null) {
-                    val list = patient.caregivers.map { cg ->
-                        val role = when (cg.role) {
-                            "Principal" -> CaregiverRole.OFFICIAL_GUARDIAN
-                            "Invitado" -> CaregiverRole.INVITED_GUARDIAN
-                            else -> CaregiverRole.SECONDARY_GUARDIAN
-                        }
-                        CaregiverUiModel(
-                            id = cg.id.toLongOrNull() ?: cg.hashCode().toLong(),
-                            name = cg.name,
-                            role = role
-                        )
-                    }
-                    val currentUserRole = when (patient.caregiverKind) {
-                        "official" -> CaregiverRole.OFFICIAL_GUARDIAN
-                        "invited" -> CaregiverRole.INVITED_GUARDIAN
-                        else -> CaregiverRole.SECONDARY_GUARDIAN
-                    }
-                    _uiState.update { state ->
-                        state.copy(
-                            patientId = patientId,
-                            patientName = patient.fullName,
-                            currentUserRole = currentUserRole,
-                            caregivers = list,
-                            emergencyContacts = patient.emergencyContacts
-                        )
-                    }
-                }
-            }
-        }
-
         // Sync from server
         viewModelScope.launch {
-            patientRepository.syncPatientDetails(patientId)
+            repository.syncPatientDetails(patientId)
         }
     }
 
-    fun removeCaregiver(caregiverId: Long) {
-        // Visual deletion since backend doesn't expose delete caregiver yet
-        _uiState.update { state ->
-            val caregiver = state.caregivers.find { it.id == caregiverId }
-            val updatedList = state.caregivers.filter { it.id != caregiverId }
-            state.copy(
-                caregivers = updatedList,
-                actionMessage = caregiver?.let { "Cuidador ${it.name} removido con éxito" }
-            )
-        }
-    }
-
-    fun toggleCaregiverPromotion(caregiverId: Long) {
-        val state = _uiState.value
-        val caregiver = state.caregivers.find { it.id == caregiverId } ?: return
+    fun removeCaregiver(caregiverId: Long, caregiverName: String) {
+        if (patientId == 0L) return
+        
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            val result = if (caregiver.role == CaregiverRole.INVITED_GUARDIAN) {
-                patientRepository.restoreGuardian(state.patientId)
+            _isLoading.value = true
+            val result = repository.removeCaregiver(patientId, caregiverId)
+            
+            if (result.isSuccess) {
+                _actionMessage.value = "Cuidador $caregiverName removido con éxito"
             } else {
-                patientRepository.changeGuardian(state.patientId, caregiverId.toInt())
+                _actionMessage.value = "Error al remover cuidador: ${result.exceptionOrNull()?.message}"
+            }
+            _isLoading.value = false
+        }
+    }
+
+    fun toggleCaregiverPromotion(caregiverId: Long, isInvited: Boolean, caregiverName: String) {
+        if (patientId == 0L) return
+
+        viewModelScope.launch {
+            _isLoading.value = true
+            val result = if (isInvited) {
+                repository.restoreGuardian(patientId)
+            } else {
+                repository.changeGuardian(patientId, caregiverId.toInt())
             }
             if (result.isSuccess) {
-                val msg = if (caregiver.role == CaregiverRole.INVITED_GUARDIAN) {
-                    "Asignación de Principal Invitado quitada a ${caregiver.name}"
+                _actionMessage.value = if (isInvited) {
+                    "Asignación de Principal Invitado quitada a $caregiverName"
                 } else {
-                    "Cuidador ${caregiver.name} asignado como Principal Invitado"
+                    "Cuidador $caregiverName asignado como Principal Invitado"
                 }
-                _uiState.update { it.copy(actionMessage = msg, isLoading = false) }
             } else {
-                _uiState.update { it.copy(actionMessage = "Error al modificar mando principal", isLoading = false) }
+                _actionMessage.value = "Error al modificar mando principal"
             }
+            _isLoading.value = false
         }
     }
 
     fun addEmergencyContact(name: String, phoneNumber: String, relationship: String) {
         if (name.isBlank() || phoneNumber.isBlank() || relationship.isBlank()) return
+        if (patientId == 0L) return
+
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            val result = patientRepository.createEmergencyContact(
-                _uiState.value.patientId,
+            _isLoading.value = true
+            val result = repository.createEmergencyContact(
+                patientId,
                 name.trim(),
                 phoneNumber.trim(),
                 relationship.trim()
             )
             if (result.isSuccess) {
-                _uiState.update { it.copy(actionMessage = "Contacto de emergencia agregado", isLoading = false) }
+                _actionMessage.value = "Contacto de emergencia agregado"
             } else {
-                _uiState.update { it.copy(actionMessage = "Error al agregar contacto de emergencia", isLoading = false) }
+                _actionMessage.value = "Error al agregar contacto de emergencia"
             }
+            _isLoading.value = false
         }
     }
 
     fun deleteEmergencyContact(contactId: Long) {
+        if (patientId == 0L) return
+
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
-            val result = patientRepository.deleteEmergencyContact(_uiState.value.patientId, contactId)
+            _isLoading.value = true
+            val result = repository.deleteEmergencyContact(patientId, contactId)
             if (result.isSuccess) {
-                _uiState.update { it.copy(actionMessage = "Contacto de emergencia eliminado", isLoading = false) }
+                _actionMessage.value = "Contacto de emergencia eliminado"
             } else {
-                _uiState.update { it.copy(actionMessage = "Error al eliminar contacto de emergencia", isLoading = false) }
+                _actionMessage.value = "Error al eliminar contacto de emergencia"
             }
+            _isLoading.value = false
         }
     }
 
     fun clearActionMessage() {
-        _uiState.update { it.copy(actionMessage = null) }
+        _actionMessage.value = null
+    }
+}
+
+// Extensión para cumplir exactamente con la sintaxis requerida leyendo directo del flow
+private fun PatientRepository.getCaregiversByPatientId(patientId: Long): Flow<List<CaregiverUiModel>> {
+    return this.getPatientByIdFlow(patientId).map { patient ->
+        patient?.caregivers?.map { cg ->
+            val role = when (cg.role) {
+                "Principal Oficial" -> CaregiverRole.OFFICIAL_GUARDIAN
+                "Principal Invitado" -> CaregiverRole.INVITED_GUARDIAN
+                else -> CaregiverRole.SECONDARY_GUARDIAN
+            }
+            CaregiverUiModel(
+                id = cg.id.toLongOrNull() ?: cg.hashCode().toLong(),
+                name = cg.name,
+                role = role
+            )
+        } ?: emptyList()
     }
 }

@@ -70,6 +70,13 @@ fun AbuelitoDetailScreen(
         }
     }
 
+    LaunchedEffect(uiState.errorMessage) {
+        uiState.errorMessage?.let { errorMsg ->
+            Toast.makeText(context, errorMsg, Toast.LENGTH_LONG).show()
+            viewModel.clearErrorMessage()
+        }
+    }
+
     val backgroundGradient = Brush.linearGradient(
         colors = listOf(Color(0xFFF6F8A7), Color(0xFFCAEFE2), Color(0xFFFFFDF1), Color(0xFFFFFDF1), Color(0xFFFFFDF1))
     )
@@ -433,8 +440,9 @@ fun AbuelitoDetailScreen(
 
                             Spacer(modifier = Modifier.height(12.dp))
 
-                            // Botón Eliminar Abuelito (en color de error/alerta)
-                            OutlinedButton(
+                            // Botón Eliminar Abuelito (en color de error/alerta) - Solo Cuidador Principal
+                            if (uiState.isPrimaryCaregiver) {
+                                OutlinedButton(
                                 onClick = { showDeleteDialog = true },
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -446,6 +454,7 @@ fun AbuelitoDetailScreen(
                                 Icon(Icons.Default.Delete, contentDescription = null, tint = FollError)
                                 Spacer(modifier = Modifier.width(8.dp))
                                 Text("Eliminar Abuelito", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                            }
                             }
 
                             Spacer(modifier = Modifier.height(12.dp))

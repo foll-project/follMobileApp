@@ -1,7 +1,9 @@
 package pe.edu.upc.follmobileapp.features.iam.data.repository
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import pe.edu.upc.follmobileapp.features.iam.data.local.AuthLocalDataSource
 import pe.edu.upc.follmobileapp.features.iam.data.local.models.UserEntity
 import pe.edu.upc.follmobileapp.features.iam.data.remote.models.LoginRequest
@@ -75,7 +77,9 @@ class AuthRepositoryImpl(
                 // Si falla la llamada de red o el token ya expiró, de todas formas
                 // debemos limpiar la sesión local para asegurar la usabilidad.
             }
-            localDataSource.clearSession()
+            withContext(Dispatchers.IO) {
+                localDataSource.clearSession()
+            }
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
