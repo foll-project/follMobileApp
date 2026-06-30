@@ -69,6 +69,13 @@ dependencies {
     implementation("com.microsoft.signalr:signalr:8.0.13")
     implementation("org.slf4j:slf4j-android:1.7.36")
 
+    // Google Code Scanner (Play Services)
+    implementation("com.google.android.gms:play-services-code-scanner:16.1.0")
+
+    // ZXing for QR Generation
+    implementation("com.google.zxing:core:3.5.3")
+
+
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)

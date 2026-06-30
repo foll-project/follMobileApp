@@ -208,8 +208,15 @@ class ProfileViewModel(
 
     fun logout(onSuccess: () -> Unit) {
         viewModelScope.launch {
-            authRepository.logout()
-            onSuccess()
+            _uiState.update { it.copy(isLoading = true) }
+            val result = authRepository.logout()
+            _uiState.update { it.copy(isLoading = false) }
+            
+            if (result.isSuccess) {
+                onSuccess()
+            } else {
+                _uiState.update { it.copy(actionMessage = "Error crítico al limpiar sesión. Reintente.") }
+            }
         }
     }
 

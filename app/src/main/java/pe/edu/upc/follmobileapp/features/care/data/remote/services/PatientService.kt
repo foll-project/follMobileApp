@@ -9,6 +9,18 @@ interface PatientService {
         @Body request: CreatePatientRequest
     )
 
+    @DELETE("api/care/patients/{id}")
+    suspend fun deletePatient(
+        @Path("id") id: Long
+    ): retrofit2.Response<Unit>
+
+    @POST("api/patients/{patientId}/caregivers/qr")
+    suspend fun linkCaregiverViaQr(
+        @Path("patientId") patientId: Long,
+        @Body request: LinkCaregiverQrRequest
+    )
+
+
     @GET("api/care/patients/by-caregiver/{caregiverUserId}")
     suspend fun getPatientsByCaregiver(
         @Path("caregiverUserId") caregiverUserId: Int
@@ -62,5 +74,11 @@ interface PatientService {
     suspend fun deleteEmergencyContact(
         @Path("id") id: Long,
         @Path("contactId") contactId: Long
+    )
+
+    @DELETE("api/patients/{id}/caregivers/{caregiverId}")
+    suspend fun removeCaregiver(
+        @Path("id") id: Long,
+        @Path("caregiverId") caregiverId: Long
     )
 }

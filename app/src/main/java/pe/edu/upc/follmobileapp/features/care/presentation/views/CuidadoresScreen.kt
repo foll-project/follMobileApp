@@ -24,6 +24,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import pe.edu.upc.follmobileapp.core.ui.components.FollBottomBar
 import pe.edu.upc.follmobileapp.core.ui.components.FollTopBar
@@ -38,9 +39,10 @@ import pe.edu.upc.follmobileapp.features.care.presentation.viewmodels.CaregiverU
 fun CuidadoresScreen(
     navController: NavController,
     patientId: Long,
-    viewModel: CuidadoresViewModel = viewModel(factory = CuidadoresViewModelFactory(LocalContext.current))
+    viewModel: CuidadoresViewModel = viewModel(factory = CuidadoresViewModelFactory(LocalContext.current, patientId))
 ) {
-    val uiState by viewModel.uiState.collectAsState()
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val caregivers by viewModel.caregivers.collectAsStateWithLifecycle()
     val context = LocalContext.current
 
     // Cargar cuidadores al iniciar
@@ -156,7 +158,7 @@ fun CuidadoresScreen(
                         )
 
                         // Listado de cuidadores
-                        uiState.caregivers.forEach { caregiver ->
+                        caregivers.forEach { caregiver ->
                             CuidadoresItemRow(
                                 caregiver = caregiver,
                                 isManageable = isCurrentUserOfficial && caregiver.role != CaregiverRole.OFFICIAL_GUARDIAN,
@@ -226,7 +228,7 @@ fun CuidadoresScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.removeCaregiver(caregiver.id)
+                        viewModel.removeCaregiver(caregiver.id, caregiver.name)
                         selectedCaregiverForDelete = null
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = FollError)
@@ -262,7 +264,7 @@ fun CuidadoresScreen(
             confirmButton = {
                 Button(
                     onClick = {
-                        viewModel.toggleCaregiverPromotion(caregiver.id)
+                        viewModel.toggleCaregiverPromotion(caregiver.id, isInvited, caregiver.name)
                         selectedCaregiverForToggle = null
                     },
                     colors = ButtonDefaults.buttonColors(containerColor = FollDarkBlue)

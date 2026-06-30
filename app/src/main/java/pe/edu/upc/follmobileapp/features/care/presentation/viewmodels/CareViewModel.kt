@@ -38,55 +38,64 @@ class CareViewModel(
     private val authRepository: AuthRepository,
     private val emergencyRepository: EmergencyRepository
 ) : ViewModel() {
-    private val _uiState = MutableStateFlow(CareUiState())
-    val uiState: StateFlow<CareUiState> = _uiState.asStateFlow()
+
+    private val _expandedPatientIds = MutableStateFlow<Set<Long>>(emptySet())
+    private val _isLoading = MutableStateFlow(false)
+    private val _errorMessage = MutableStateFlow<String?>(null)
+
+    val uiState: StateFlow<CareUiState> = combine(
+        patientRepository.getPatientsFlow(),
+        emergencyRepository.getAlertsFlow(),
+        _expandedPatientIds,
+        _isLoading,
+        _errorMessage
+    ) { patientsList, activeAlerts, expandedIds, isLoading, errorMsg ->
+        val emergencyPatientIds = activeAlerts.map { it.patientId }.toSet()
+        val uiPatients = patientsList.map { patient ->
+            val role = when (patient.caregiverKind) {
+                "official" -> CaregiverRole.OFFICIAL_GUARDIAN
+                "invited_primary" -> CaregiverRole.INVITED_GUARDIAN
+                else -> CaregiverRole.SECONDARY_GUARDIAN
+            }
+            PatientUiModel(
+                id = patient.id,
+                name = patient.fullName,
+                role = role,
+                deviceId = patient.device?.id ?: "Sin dispositivo",
+                isDeviceOn = patient.device?.status == "Online",
+                batteryPercentage = patient.device?.batteryPercentage ?: 0,
+                isCharging = patient.device?.isCharging ?: false,
+                isInEmergency = emergencyPatientIds.contains(patient.id)
+            )
+        }
+        CareUiState(
+            patients = uiPatients,
+            expandedPatientIds = expandedIds,
+            isLoading = isLoading,
+            errorMessage = errorMsg
+        )
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = CareUiState()
+    )
 
     init {
-        observePatients()
         syncPatientsFromRemote()
         syncAlertsFromRemote()
     }
 
-    private fun observePatients() {
-        viewModelScope.launch {
-            combine(
-                patientRepository.getPatientsFlow(),
-                emergencyRepository.getAlertsFlow()
-            ) { patientsList, activeAlerts ->
-                val emergencyPatientIds = activeAlerts.map { it.patientId }.toSet()
-                patientsList.map { patient ->
-                    val role = when (patient.caregiverKind) {
-                        "official" -> CaregiverRole.OFFICIAL_GUARDIAN
-                        "invited" -> CaregiverRole.INVITED_GUARDIAN
-                        else -> CaregiverRole.SECONDARY_GUARDIAN
-                    }
-                    PatientUiModel(
-                        id = patient.id,
-                        name = patient.fullName,
-                        role = role,
-                        deviceId = patient.device?.id ?: "Sin dispositivo",
-                        isDeviceOn = patient.device?.status == "Online",
-                        batteryPercentage = patient.device?.batteryPercentage ?: 0,
-                        isCharging = patient.device?.isCharging ?: false,
-                        isInEmergency = emergencyPatientIds.contains(patient.id)
-                    )
-                }
-            }.collect { uiPatients ->
-                _uiState.update { it.copy(patients = uiPatients) }
-            }
-        }
-    }
-
     fun syncPatientsFromRemote() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            _isLoading.value = true
+            _errorMessage.value = null
             authRepository.getLoggedInUser().firstOrNull()?.let { user ->
                 val result = patientRepository.syncPatients(user.userId)
                 if (result.isFailure) {
-                    _uiState.update { it.copy(errorMessage = "Error de sincronización con el servidor") }
+                    _errorMessage.value = "Error de sincronización con el servidor"
                 }
             }
-            _uiState.update { it.copy(isLoading = false) }
+            _isLoading.value = false
         }
     }
 
@@ -98,13 +107,47 @@ class CareViewModel(
     }
 
     fun togglePatientExpansion(patientId: Long) {
-        _uiState.update { state ->
-            val newExpanded = if (state.expandedPatientIds.contains(patientId)) {
-                state.expandedPatientIds - patientId
-            } else {
-                state.expandedPatientIds + patientId
+        val current = _expandedPatientIds.value
+        _expandedPatientIds.value = if (current.contains(patientId)) {
+            current - patientId
+        } else {
+            current + patientId
+        }
+    }
+
+    fun vincularCuidadorPorQr(patientId: Long) {
+        viewModelScope.launch {
+            _isLoading.value = true
+            _errorMessage.value = null
+            try {
+                authRepository.getLoggedInUser().firstOrNull()?.let { user ->
+                    val result = patientRepository.linkCaregiverViaQr(patientId, user.userId.toLong())
+                    if (result.isSuccess) {
+                        syncPatientsFromRemote()
+                    } else {
+                        val exception = result.exceptionOrNull()
+                        val errorMsg = if (exception is retrofit2.HttpException) {
+                            try {
+                                val errorBody = exception.response()?.errorBody()?.string()
+                                if (errorBody != null && errorBody.contains("message")) {
+                                    org.json.JSONObject(errorBody).getString("message")
+                                } else {
+                                    "Error al vincular: código ${exception.code()}"
+                                }
+                            } catch (e: Exception) {
+                                "Error HTTP ${exception.code()}"
+                            }
+                        } else {
+                            exception?.message ?: "Error desconocido"
+                        }
+                        _errorMessage.value = errorMsg
+                    }
+                }
+            } catch (e: Exception) {
+                _errorMessage.value = "Error de conexión"
+            } finally {
+                _isLoading.value = false
             }
-            state.copy(expandedPatientIds = newExpanded)
         }
     }
 }

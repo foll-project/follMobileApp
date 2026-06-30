@@ -16,7 +16,7 @@ object NetworkModule {
     //
     // Esta misma URL la reutiliza el WebSocket (SignalR) en tiempo real, así que
     // SOLO se cambia aquí para TODA la app (HTTP + WebSockets).
-    const val BASE_URL = "http://10.0.2.2:5237/"
+    const val BASE_URL = "http://localhost:5237/"
 
     @Volatile
     private var retrofit: Retrofit? = null

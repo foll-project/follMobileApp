@@ -28,7 +28,8 @@ data class AbuelitoDetailUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
     val device: DeviceInfo? = null,
-    val actionMessage: String? = null
+    val actionMessage: String? = null,
+    val isPrimaryCaregiver: Boolean = false
 )
 
 class AbuelitoDetailViewModel(
@@ -57,7 +58,8 @@ class AbuelitoDetailViewModel(
                                 dni = patient.dni,
                                 enfermedades = patient.illnesses.joinToString(", "),
                                 medicamentos = patient.medications.joinToString(", "),
-                                device = patient.device
+                                device = patient.device,
+                                isPrimaryCaregiver = (patient.caregiverKind == "official")
                             )
                         } else {
                             state.copy(
@@ -190,12 +192,14 @@ class AbuelitoDetailViewModel(
 
     fun deletePatient() {
         viewModelScope.launch {
-            _uiState.update { it.copy(isLoading = true) }
+            _uiState.update { it.copy(isLoading = true, errorMessage = null) }
             val result = patientRepository.deletePatientLocally(_uiState.value.patientId)
+            
             if (result.isSuccess) {
                 _uiState.update { it.copy(isDeleted = true, isLoading = false) }
             } else {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "Error al eliminar localmente") }
+                val errorMsg = result.exceptionOrNull()?.message ?: "Error al intentar eliminar el perfil"
+                _uiState.update { it.copy(isLoading = false, errorMessage = errorMsg) }
             }
         }
     }
@@ -208,7 +212,28 @@ class AbuelitoDetailViewModel(
                 patientRepository.syncPatientDetails(_uiState.value.patientId)
                 _uiState.update { it.copy(isLoading = false, actionMessage = "Dispositivo vinculado correctamente") }
             } else {
-                _uiState.update { it.copy(isLoading = false, errorMessage = "Error al vincular el dispositivo") }
+                val exception = result.exceptionOrNull()
+                val errorMsg = if (exception is retrofit2.HttpException) {
+                    when (exception.code()) {
+                        404 -> "El identificador del dispositivo ingresado no existe en el sistema."
+                        400 -> {
+                            try {
+                                val errorBody = exception.response()?.errorBody()?.string()
+                                if (errorBody != null && errorBody.contains("message")) {
+                                    org.json.JSONObject(errorBody).getString("message")
+                                } else {
+                                    "Error al vincular: Solicitud incorrecta (400)"
+                                }
+                            } catch (e: Exception) {
+                                "Error HTTP 400"
+                            }
+                        }
+                        else -> "Error HTTP ${exception.code()} al intentar vincular."
+                    }
+                } else {
+                    exception?.message ?: "Error de conexión al vincular el dispositivo."
+                }
+                _uiState.update { it.copy(isLoading = false, errorMessage = errorMsg) }
             }
         }
     }
@@ -228,5 +253,9 @@ class AbuelitoDetailViewModel(
 
     fun clearActionMessage() {
         _uiState.update { it.copy(actionMessage = null) }
+    }
+
+    fun clearErrorMessage() {
+        _uiState.update { it.copy(errorMessage = null) }
     }
 }

@@ -74,15 +74,20 @@ object PatientMapper {
         )
     }
 
-    fun toDomain(dto: PatientResponseDto): Patient {
+    fun toDomain(dto: PatientResponseDto, currentUserId: Int = -1): Patient {
         val inner = dto.patient ?: dto
         
         val caregivers = inner.caregivers?.map { cg ->
             val fullName = "${cg.user?.firstName ?: ""} ${cg.user?.lastName ?: ""}".trim()
+            val cgRole = when {
+                cg.caregiverKind == "official" || inner.officialGuardianUserId == cg.userId -> "Principal Oficial"
+                inner.currentGuardianUserId == cg.userId -> "Principal Invitado"
+                else -> "Secundario"
+            }
             Caregiver(
                 id = cg.userId?.toString() ?: "",
                 name = if (fullName.isEmpty()) "Desconocido" else fullName,
-                role = if (cg.caregiverKind == "official") "Principal" else "Invitado",
+                role = cgRole,
                 email = cg.user?.email ?: ""
             )
         } ?: emptyList()
@@ -118,6 +123,14 @@ object PatientMapper {
             )
         } ?: emptyList()
 
+        // Determinar el rol del usuario logueado respecto a este paciente
+        val determinedKind = when {
+            dto.caregiverKind == "official" || inner.officialGuardianUserId == currentUserId -> "official"
+            inner.currentGuardianUserId == currentUserId -> "invited_primary"
+            dto.caregiverKind != null -> dto.caregiverKind // si viene "caregiver" o null del wrapper
+            else -> inner.caregiverKind ?: "caregiver"
+        }
+
         return Patient(
             id = inner.patientId ?: 0L,
             firstName = inner.firstName ?: "",
@@ -131,7 +144,7 @@ object PatientMapper {
             annotations = annotations,
             emergencyContacts = emergencyContacts,
             device = device,
-            caregiverKind = dto.caregiverKind ?: inner.caregiverKind ?: "caregiver"
+            caregiverKind = determinedKind
         )
     }
 
@@ -227,15 +240,22 @@ class PatientRepositoryImpl(
 
     override suspend fun syncPatients(caregiverUserId: Int): Result<Unit> = runCatching {
         val response = patientService.getPatientsByCaregiver(caregiverUserId)
-        val domainPatients = response.map { PatientMapper.toDomain(it) }
+        val domainPatients = response.map { PatientMapper.toDomain(it, caregiverUserId) }
         val entities = domainPatients.map { PatientMapper.toEntity(it) }
-        localDataSource.savePatients(entities)
+        localDataSource.syncPatientsData(entities)
     }
 
     override suspend fun syncPatientDetails(patientId: Long): Result<Unit> = runCatching {
         val response = patientService.getPatientById(patientId)
         val domainPatient = PatientMapper.toDomain(response)
-        val entity = PatientMapper.toEntity(domainPatient)
+        
+        // Recuperar el paciente local actual para preservar su rol (caregiverKind)
+        // ya que el endpoint getPatientById no incluye el wrapper con esta información.
+        val existingPatient = localDataSource.getPatientById(patientId)
+        val preservedRole = existingPatient?.caregiverKind ?: domainPatient.caregiverKind
+        
+        // Aplicar el rol preservado a la entidad antes de guardarla en la caché local
+        val entity = PatientMapper.toEntity(domainPatient).copy(caregiverKind = preservedRole)
         localDataSource.savePatient(entity)
     }
 
@@ -294,7 +314,12 @@ class PatientRepositoryImpl(
     }
 
     override suspend fun deletePatientLocally(id: Long): Result<Unit> = runCatching {
-        localDataSource.deletePatient(id)
+        val response = patientService.deletePatient(id)
+        if (response.isSuccessful) {
+            localDataSource.deletePatient(id)
+        } else {
+            throw Exception("Fallo en el servidor: HTTP ${response.code()}")
+        }
     }
 
     override suspend fun updateDeviceTelemetry(
@@ -373,5 +398,15 @@ class PatientRepositoryImpl(
         } else {
             syncPatientDetails(patientId)
         }
+    }
+    override suspend fun linkCaregiverViaQr(patientId: Long, caregiverId: Long): Result<Unit> = runCatching {
+        val request = LinkCaregiverQrRequest(caregiverId)
+        patientService.linkCaregiverViaQr(patientId, request)
+    }
+
+    override suspend fun removeCaregiver(patientId: Long, caregiverId: Long): Result<Boolean> = runCatching {
+        patientService.removeCaregiver(patientId, caregiverId)
+        syncPatientDetails(patientId) // Refresca los datos del paciente para removerlo del backend y local
+        true
     }
 }
