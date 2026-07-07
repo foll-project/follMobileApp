@@ -30,6 +30,8 @@ import androidx.navigation.NavController
 import pe.edu.upc.follmobileapp.core.ui.theme.*
 import pe.edu.upc.follmobileapp.features.emergency.presentation.viewmodels.AlertViewModel
 import pe.edu.upc.follmobileapp.features.emergency.presentation.viewmodels.AlertViewModelFactory
+import android.content.Intent
+import android.net.Uri
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -234,7 +236,18 @@ fun AlertDetailScreen(
                                 spotColor = FollDarkBlue
                             )
                             .clickable {
-                                uriHandler.openUri("https://www.google.com/maps/search/?api=1&query=${alert.latitude},${alert.longitude}")
+                                val lat = alert.latitude
+                                val lng = alert.longitude
+                                val mapUri = Uri.parse("google.navigation:q=$lat,$lng")
+                                val mapIntent = Intent(Intent.ACTION_VIEW, mapUri)
+                                mapIntent.setPackage("com.google.android.apps.maps")
+                                try {
+                                    context.startActivity(mapIntent)
+                                } catch (e: Exception) {
+                                    val fallbackUri = Uri.parse("https://www.google.com/maps/search/?api=1&query=$lat,$lng")
+                                    val browserIntent = Intent(Intent.ACTION_VIEW, fallbackUri)
+                                    context.startActivity(browserIntent)
+                                }
                             }
                     ) {
                         Column(modifier = Modifier.padding(24.dp)) {
@@ -328,7 +341,10 @@ fun AlertDetailScreen(
 
                     // Botón de Llamar Ambulancia (Color verde premium y dialer icon)
                     Button(
-                        onClick = { /* Lógica de llamada externa */ },
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:+51945464893"))
+                            context.startActivity(intent)
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(56.dp)
