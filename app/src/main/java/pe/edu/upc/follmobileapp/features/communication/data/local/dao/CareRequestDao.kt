@@ -15,6 +15,9 @@ interface CareRequestDao {
     @Query("DELETE FROM care_requests WHERE type = :type")
     suspend fun deleteCareRequestsByType(type: String)
 
+    @Query("DELETE FROM care_requests")
+    suspend fun clearAllCareRequests()
+
     @Query("DELETE FROM care_requests WHERE invitationId = :id")
     suspend fun deleteCareRequestById(id: Long)
 

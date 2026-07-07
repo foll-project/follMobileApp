@@ -1,5 +1,8 @@
 package pe.edu.upc.follmobileapp.features.emergency.presentation.views
 
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -9,27 +12,32 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Assignment
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.platform.LocalContext
-import android.widget.Toast
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import pe.edu.upc.follmobileapp.core.ui.components.FollBottomBar
+import pe.edu.upc.follmobileapp.core.ui.components.FollTopBar
 import pe.edu.upc.follmobileapp.core.ui.theme.*
 import pe.edu.upc.follmobileapp.features.emergency.presentation.viewmodels.AlertViewModel
 import pe.edu.upc.follmobileapp.features.emergency.presentation.viewmodels.AlertViewModelFactory
+
+private val CardShape = RoundedCornerShape(24.dp)
+private val EmergencyAccent = Color(0xFFEF5350)
+private val EmergencyTint = Color(0xFFFFEBEE)
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -41,9 +49,9 @@ fun AlertDetailScreen(
     val uiState by viewModel.uiState.collectAsState()
     val alert = uiState.alerts.firstOrNull { it.id == alertId }
     val uriHandler = LocalUriHandler.current
+    val context = LocalContext.current
     var showMedicalDialog by remember { mutableStateOf(false) }
     var showAttendDialog by remember { mutableStateOf(false) }
-    val context = LocalContext.current
 
     LaunchedEffect(uiState.actionMessage) {
         uiState.actionMessage?.let { msg ->
@@ -58,18 +66,20 @@ fun AlertDetailScreen(
         }
     }
 
-    // Gradiente premium suave, llamativo pero reconfortante y profesional (arena, coral pastel y blanco)
+    // Mismo degradado Foll que el resto de la app, con un toque muy suave de urgencia al inicio.
     val backgroundGradient = Brush.linearGradient(
         colors = listOf(
-            Color(0xFFFFF8F8),
-            Color(0xFFFFECEC),
-            Color(0xFFFFFBF0),
-            Color(0xFFFFF8F8)
+            Color(0xFFF6F8A7),
+            Color(0xFFFFF0F0),
+            Color(0xFFCAEFE2),
+            Color(0xFFFFFDF1),
+            Color(0xFFFFFDF1)
         )
     )
-    val redAlertColor = Color(0xFFC62828)
 
     Scaffold(
+        topBar = { FollTopBar(navController, showBackButton = true) },
+        bottomBar = { FollBottomBar(navController, "alerts_screen") },
         containerColor = Color.Transparent
     ) { paddingValues ->
         Box(
@@ -84,7 +94,11 @@ fun AlertDetailScreen(
                         .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
-                    Text("Alerta no encontrada", fontSize = 18.sp, color = FollDarkBlue)
+                    Text(
+                        text = "Alerta no encontrada",
+                        fontSize = 18.sp,
+                        color = FollDarkBlue
+                    )
                 }
             } else {
                 Column(
@@ -95,185 +109,178 @@ fun AlertDetailScreen(
                         .verticalScroll(rememberScrollState()),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Encabezado con botón de retroceso flotante y ALERTA
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.Start
-                    ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = Color.White.copy(alpha = 0.8f),
-                            modifier = Modifier.size(44.dp),
-                            border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.3f))
-                        ) {
-                            IconButton(onClick = { navController.popBackStack() }) {
-                                Icon(
-                                    imageVector = Icons.Default.ArrowBack,
-                                    contentDescription = "Retroceder",
-                                    tint = redAlertColor,
-                                    modifier = Modifier.size(24.dp)
-                                )
-                            }
-                        }
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Text(
-                            text = "ALERTA",
-                            fontSize = 30.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = redAlertColor,
-                            letterSpacing = 2.sp
-                        )
-                    }
-
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Tarjeta Principal (Glassmorphism sutil y bordes cuidados)
+                    // ── Tarjeta principal del paciente ──
                     Surface(
-                        shape = RoundedCornerShape(32.dp),
-                        color = Color(0xE6FFFFFF), // Blanco translúcido premium
-                        border = BorderStroke(1.5.dp, Color(0xFFEF5350).copy(alpha = 0.25f)),
+                        shape = CardShape,
+                        color = Color(0xFBFFFFFF),
+                        border = BorderStroke(1.5.dp, EmergencyAccent.copy(alpha = 0.55f)),
                         modifier = Modifier
                             .fillMaxWidth()
                             .shadow(
                                 elevation = 8.dp,
-                                shape = RoundedCornerShape(32.dp),
+                                shape = CardShape,
                                 clip = false,
-                                ambientColor = redAlertColor,
-                                spotColor = redAlertColor
+                                ambientColor = FollDarkBlue,
+                                spotColor = FollDarkBlue
                             )
                     ) {
                         Column(
-                            modifier = Modifier.padding(28.dp),
+                            modifier = Modifier.padding(24.dp),
                             horizontalAlignment = Alignment.CenterHorizontally
                         ) {
-                            // Nombre del paciente en letra prominente y elegante
-                            Text(
-                                text = alert.patientName,
-                                fontSize = 34.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = FollDarkBlue,
-                                textAlign = TextAlign.Center
-                            )
-                            
-                            Spacer(modifier = Modifier.height(18.dp))
-                            
-                            // Insignia de tiempo transcurrido (Pill)
-                            Surface(
-                                shape = RoundedCornerShape(14.dp),
-                                color = Color(0xFFFFEBEE),
-                                border = BorderStroke(1.dp, Color(0xFFEF5350).copy(alpha = 0.4f))
+                            // Encabezado de emergencia (mismo patrón que Anotaciones / Solicitudes)
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.fillMaxWidth()
                             ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                                Surface(
+                                    shape = CircleShape,
+                                    color = EmergencyTint,
+                                    modifier = Modifier.size(44.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Default.AccessTime,
-                                        contentDescription = "Tiempo",
-                                        tint = redAlertColor,
-                                        modifier = Modifier.size(20.dp)
+                                        imageVector = Icons.Default.Warning,
+                                        contentDescription = null,
+                                        tint = FollError,
+                                        modifier = Modifier.padding(10.dp)
                                     )
-                                    Spacer(modifier = Modifier.width(8.dp))
+                                }
+                                Spacer(modifier = Modifier.width(12.dp))
+                                Column {
                                     Text(
-                                        text = "Hace ${alert.elapsedMinutes} minutos",
-                                        fontSize = 18.sp,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = redAlertColor
+                                        text = "Alerta de caída",
+                                        fontSize = 22.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = FollDarkBlue
+                                    )
+                                    Text(
+                                        text = "Requiere atención inmediata",
+                                        fontSize = 14.sp,
+                                        color = FollDarkGray
                                     )
                                 }
                             }
 
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(20.dp))
 
-                            // Insignia de tipo de caída (Pill)
+                            Text(
+                                text = alert.patientName,
+                                fontSize = 26.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = FollDarkBlue,
+                                textAlign = TextAlign.Center
+                            )
+
+                            Spacer(modifier = Modifier.height(16.dp))
+
+                            // Pill: tiempo transcurrido (acento rojo puntual, como PatientCardItem)
                             Surface(
-                                shape = RoundedCornerShape(14.dp),
-                                color = FollLightGreen.copy(alpha = 0.35f),
-                                border = BorderStroke(1.dp, FollDarkBlue.copy(alpha = 0.15f))
+                                shape = RoundedCornerShape(12.dp),
+                                color = EmergencyTint,
+                                border = BorderStroke(1.dp, EmergencyAccent.copy(alpha = 0.5f))
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp)
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Default.AccessTime,
+                                        contentDescription = null,
+                                        tint = FollError,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text(
+                                        text = "Hace ${alert.elapsedMinutes} min",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = FollError
+                                    )
+                                }
+                            }
+
+                            Spacer(modifier = Modifier.height(10.dp))
+
+                            // Pill: tipo de caída (verde Foll, como el resto de la app)
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = FollLightGreen.copy(alpha = 0.45f),
+                                border = BorderStroke(1.dp, FollPrimary.copy(alpha = 0.35f))
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Sensors,
-                                        contentDescription = "Sensor",
+                                        contentDescription = null,
                                         tint = FollDarkBlue,
-                                        modifier = Modifier.size(18.dp)
+                                        modifier = Modifier.size(16.dp)
                                     )
-                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Spacer(modifier = Modifier.width(6.dp))
                                     Text(
                                         text = alert.fallType,
-                                        fontSize = 15.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = FollDarkBlue,
-                                        textAlign = TextAlign.Center
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = FollDarkBlue
                                     )
                                 }
                             }
                         }
                     }
 
-                    Spacer(modifier = Modifier.height(20.dp))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                    // Tarjeta de Ubicación del Evento (Elegante GPS Card sin foto)
+                    // ── Tarjeta de ubicación ──
                     Surface(
-                        shape = RoundedCornerShape(28.dp),
-                        color = Color(0xE6FFFFFF),
-                        border = BorderStroke(1.dp, FollDarkBlue.copy(alpha = 0.12f)),
+                        shape = CardShape,
+                        color = Color(0xFBFFFFFF),
                         modifier = Modifier
                             .fillMaxWidth()
                             .shadow(
-                                elevation = 6.dp,
-                                shape = RoundedCornerShape(28.dp),
+                                elevation = 8.dp,
+                                shape = CardShape,
                                 clip = false,
                                 ambientColor = FollDarkBlue,
                                 spotColor = FollDarkBlue
                             )
                             .clickable {
-                                uriHandler.openUri("https://www.google.com/maps/search/?api=1&query=${alert.latitude},${alert.longitude}")
+                                uriHandler.openUri(
+                                    "https://www.google.com/maps/search/?api=1&query=${alert.latitude},${alert.longitude}"
+                                )
                             }
                     ) {
                         Column(modifier = Modifier.padding(24.dp)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = redAlertColor.copy(alpha = 0.12f),
-                                    modifier = Modifier.size(36.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Default.LocationOn,
-                                        contentDescription = "Ubicación",
-                                        tint = redAlertColor,
-                                        modifier = Modifier.padding(8.dp)
-                                    )
-                                }
-                                Spacer(modifier = Modifier.width(12.dp))
+                                Icon(
+                                    imageVector = Icons.Default.LocationOn,
+                                    contentDescription = null,
+                                    tint = FollDarkBlue,
+                                    modifier = Modifier.size(26.dp)
+                                )
+                                Spacer(modifier = Modifier.width(10.dp))
                                 Text(
-                                    text = "Ubicación del Evento",
+                                    text = "Ubicación del evento",
                                     fontSize = 18.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color.Black
+                                    color = FollDarkBlue
                                 )
                             }
-                            Spacer(modifier = Modifier.height(12.dp))
+                            Spacer(modifier = Modifier.height(10.dp))
                             Text(
                                 text = alert.address,
-                                fontSize = 16.sp,
+                                fontSize = 15.sp,
                                 fontWeight = FontWeight.Medium,
-                                color = FollDarkBlue,
+                                color = FollDarkGray,
                                 lineHeight = 22.sp
                             )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            
-                            // Indicador de Google Maps táctil
+                            Spacer(modifier = Modifier.height(12.dp))
                             Surface(
                                 shape = RoundedCornerShape(12.dp),
-                                color = Color(0xFFFFEBEE),
-                                border = BorderStroke(1.dp, redAlertColor.copy(alpha = 0.3f))
+                                color = FollLightGreen.copy(alpha = 0.35f),
+                                border = BorderStroke(1.dp, FollPrimary.copy(alpha = 0.3f))
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
@@ -281,16 +288,16 @@ fun AlertDetailScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Default.Map,
-                                        contentDescription = "Google Maps",
-                                        tint = redAlertColor,
+                                        contentDescription = null,
+                                        tint = FollDarkBlue,
                                         modifier = Modifier.size(16.dp)
                                     )
                                     Spacer(modifier = Modifier.width(6.dp))
                                     Text(
-                                        text = "Tocar para abrir en Google Maps",
+                                        text = "Abrir en Google Maps",
                                         fontSize = 13.sp,
-                                        fontWeight = FontWeight.Bold,
-                                        color = redAlertColor
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = FollDarkBlue
                                     )
                                 }
                             }
@@ -299,75 +306,21 @@ fun AlertDetailScreen(
 
                     Spacer(modifier = Modifier.height(24.dp))
 
-                    // Botón para acceder a la ficha médica de datos (Popup dialog)
-                    Button(
-                        onClick = { showMedicalDialog = true },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .shadow(4.dp, RoundedCornerShape(28.dp), ambientColor = FollDarkBlue, spotColor = FollDarkBlue),
-                        colors = ButtonDefaults.buttonColors(containerColor = FollYellow),
-                        shape = RoundedCornerShape(28.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Assignment,
-                            contentDescription = null,
-                            tint = FollDarkBlue,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "VER FICHA MÉDICA Y ANOTACIONES",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = FollDarkBlue
-                        )
-                    }
+                    // ── Acciones (jerarquía Foll: 1 primario azul, 2 secundarios outline) ──
 
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Botón de Llamar Ambulancia (Color verde premium y dialer icon)
-                    Button(
-                        onClick = { /* Lógica de llamada externa */ },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(56.dp)
-                            .shadow(4.dp, RoundedCornerShape(28.dp), ambientColor = Color(0xFF2E7D32), spotColor = Color(0xFF2E7D32)),
-                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
-                        shape = RoundedCornerShape(28.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.Call,
-                            contentDescription = "Llamar",
-                            tint = Color.White,
-                            modifier = Modifier.size(22.dp)
-                        )
-                        Spacer(modifier = Modifier.width(10.dp))
-                        Text(
-                            text = "LLAMAR AMBULANCIA",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White
-                        )
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // Botón ATENDER: cierra el incidente y avisa en tiempo real a los demás cuidadores
+                    // 1. Atender — acción principal
                     Button(
                         onClick = { showAttendDialog = true },
                         enabled = !uiState.isLoading,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(56.dp)
-                            .shadow(4.dp, RoundedCornerShape(28.dp), ambientColor = FollDarkBlue, spotColor = FollDarkBlue),
-                        colors = ButtonDefaults.buttonColors(containerColor = FollPaleYellow),
-                        border = BorderStroke(1.5.dp, FollDarkBlue),
-                        shape = RoundedCornerShape(28.dp)
+                            .height(52.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = FollDarkBlue),
+                        shape = RoundedCornerShape(26.dp)
                     ) {
                         if (uiState.isLoading) {
                             CircularProgressIndicator(
-                                color = FollDarkBlue,
+                                color = White,
                                 strokeWidth = 2.5.dp,
                                 modifier = Modifier.size(22.dp)
                             )
@@ -375,17 +328,71 @@ fun AlertDetailScreen(
                             Icon(
                                 imageVector = Icons.Default.CheckCircle,
                                 contentDescription = null,
-                                tint = FollDarkBlue,
-                                modifier = Modifier.size(22.dp)
+                                tint = White,
+                                modifier = Modifier.size(20.dp)
                             )
-                            Spacer(modifier = Modifier.width(10.dp))
+                            Spacer(modifier = Modifier.width(8.dp))
                             Text(
-                                text = "ATENDER EMERGENCIA",
+                                text = "Atender emergencia",
                                 fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = FollDarkBlue
+                                fontWeight = FontWeight.Bold
                             )
                         }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // 2. Llamar ambulancia — secundario urgente (outline rojo Foll)
+                    OutlinedButton(
+                        onClick = {
+                            context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:105")))
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        border = BorderStroke(1.5.dp, FollError),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = FollError),
+                        shape = RoundedCornerShape(26.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Call,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Llamar ambulancia",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
+                    // 3. Ficha médica — terciario (como "Vincular QR" en CareScreen)
+                    OutlinedButton(
+                        onClick = { showMedicalDialog = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        border = BorderStroke(1.dp, Color.Transparent),
+                        colors = ButtonDefaults.outlinedButtonColors(
+                            containerColor = Color(0xBBFFFFFF),
+                            contentColor = FollDarkBlue
+                        ),
+                        shape = RoundedCornerShape(26.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Assignment,
+                            contentDescription = null,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Ver ficha médica y anotaciones",
+                            fontSize = 15.sp,
+                            fontWeight = FontWeight.Bold
+                        )
                     }
 
                     Spacer(modifier = Modifier.height(10.dp))
@@ -394,7 +401,9 @@ fun AlertDetailScreen(
                         fontSize = 12.sp,
                         color = FollDarkGray,
                         textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp)
                     )
 
                     Spacer(modifier = Modifier.height(32.dp))
@@ -403,30 +412,24 @@ fun AlertDetailScreen(
         }
     }
 
-    // Modal Popup con la Ficha Médica y Anotaciones (Modernizado)
+    // ── Diálogo: ficha médica ──
     if (showMedicalDialog && alert != null) {
         AlertDialog(
             onDismissRequest = { showMedicalDialog = false },
             title = {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.padding(bottom = 8.dp)
+                    modifier = Modifier.padding(bottom = 4.dp)
                 ) {
-                    Surface(
-                        shape = CircleShape,
-                        color = FollOrange.copy(alpha = 0.15f),
-                        modifier = Modifier.size(40.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Default.MedicalServices,
-                            contentDescription = null,
-                            tint = FollOrange,
-                            modifier = Modifier.padding(10.dp)
-                        )
-                    }
-                    Spacer(modifier = Modifier.width(12.dp))
+                    Icon(
+                        imageVector = Icons.Default.MedicalServices,
+                        contentDescription = null,
+                        tint = FollDarkBlue,
+                        modifier = Modifier.size(28.dp)
+                    )
+                    Spacer(modifier = Modifier.width(10.dp))
                     Text(
-                        text = "Ficha Médica",
+                        text = "Ficha médica",
                         fontSize = 22.sp,
                         fontWeight = FontWeight.Bold,
                         color = FollDarkBlue
@@ -439,49 +442,37 @@ fun AlertDetailScreen(
                         .fillMaxWidth()
                         .verticalScroll(rememberScrollState())
                 ) {
-                    // Nombre
-                    Text("Nombre Completo", fontSize = 12.sp, color = FollDarkGray)
-                    Text(alert.patientName, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    MedicalField(label = "Nombre completo", value = alert.patientName)
                     Spacer(modifier = Modifier.height(12.dp))
-
-                    // DNI
-                    Text("DNI", fontSize = 12.sp, color = FollDarkGray)
-                    Text(alert.dni, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    MedicalField(label = "DNI", value = alert.dni)
                     Spacer(modifier = Modifier.height(12.dp))
-
-                    // Edad y Sangre
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.spacedBy(16.dp)
                     ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Edad", fontSize = 12.sp, color = FollDarkGray)
-                            Text("${alert.age} años", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                        }
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text("Grupo Sanguíneo", fontSize = 12.sp, color = FollDarkGray)
-                            Text(alert.bloodType, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
-                        }
+                        MedicalField(
+                            label = "Edad",
+                            value = "${alert.age} años",
+                            modifier = Modifier.weight(1f)
+                        )
+                        MedicalField(
+                            label = "Grupo sanguíneo",
+                            value = alert.bloodType,
+                            modifier = Modifier.weight(1f)
+                        )
                     }
                     Spacer(modifier = Modifier.height(12.dp))
-
-                    // Condiciones
-                    Text("Condiciones Médicas", fontSize = 12.sp, color = FollDarkGray)
-                    Text(alert.medicalConditions, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    MedicalField(label = "Condiciones médicas", value = alert.medicalConditions)
                     Spacer(modifier = Modifier.height(12.dp))
-
-                    // Medicamentos
-                    Text("Medicamentos Prescritos", fontSize = 12.sp, color = FollDarkGray)
-                    Text(alert.medications, fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    MedicalField(label = "Medicamentos", value = alert.medications)
 
                     Spacer(modifier = Modifier.height(20.dp))
-                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.4f), thickness = 1.dp)
-                    Spacer(modifier = Modifier.height(20.dp))
+                    HorizontalDivider(color = Color.LightGray.copy(alpha = 0.35f))
+                    Spacer(modifier = Modifier.height(16.dp))
 
-                    // Anotaciones
                     Text(
-                        text = "Últimas Anotaciones de Cuidado",
-                        fontSize = 17.sp,
+                        text = "Últimas anotaciones",
+                        fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         color = FollDarkBlue
                     )
@@ -489,31 +480,34 @@ fun AlertDetailScreen(
 
                     val annotations = uiState.patientAnnotations[alert.patientId] ?: emptyList()
                     if (annotations.isEmpty()) {
-                        Text("No hay anotaciones registradas.", fontSize = 14.sp, color = Color.Gray)
+                        Text(
+                            text = "No hay anotaciones registradas.",
+                            fontSize = 14.sp,
+                            color = FollDarkGray
+                        )
                     } else {
                         annotations.forEach { annotation ->
                             Surface(
                                 shape = RoundedCornerShape(16.dp),
-                                color = Color(0xFFFFFDF1),
-                                border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.2f)),
+                                color = FollBackground,
+                                border = BorderStroke(1.dp, Color.LightGray.copy(alpha = 0.25f)),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .padding(vertical = 4.dp)
-                                    .shadow(2.dp, RoundedCornerShape(16.dp), ambientColor = FollDarkBlue, spotColor = FollDarkBlue)
                             ) {
                                 Column(modifier = Modifier.padding(14.dp)) {
                                     Text(
-                                        text = "${annotation.dateString} - ${annotation.authorName}",
+                                        text = "${annotation.dateString} · ${annotation.authorName}",
                                         fontSize = 11.sp,
                                         fontWeight = FontWeight.Bold,
                                         color = FollDarkGray
                                     )
-                                    Spacer(modifier = Modifier.height(6.dp))
+                                    Spacer(modifier = Modifier.height(4.dp))
                                     Text(
                                         text = annotation.content,
                                         fontSize = 14.sp,
-                                        color = Color.Black,
-                                        lineHeight = 18.sp
+                                        color = FollDarkBlue,
+                                        lineHeight = 20.sp
                                     )
                                 }
                             }
@@ -530,25 +524,25 @@ fun AlertDetailScreen(
                     Text("Cerrar", fontWeight = FontWeight.Bold)
                 }
             },
-            shape = RoundedCornerShape(28.dp),
-            containerColor = Color.White
+            shape = RoundedCornerShape(24.dp),
+            containerColor = White
         )
     }
 
-    // Confirmación para ATENDER la emergencia
+    // ── Diálogo: confirmar atención ──
     if (showAttendDialog && alert != null) {
         AlertDialog(
             onDismissRequest = { showAttendDialog = false },
             icon = {
                 Surface(
                     shape = CircleShape,
-                    color = Color(0xFF2E7D32).copy(alpha = 0.12f),
+                    color = FollLightGreen.copy(alpha = 0.5f),
                     modifier = Modifier.size(52.dp)
                 ) {
                     Icon(
                         imageVector = Icons.Default.VolunteerActivism,
                         contentDescription = null,
-                        tint = Color(0xFF2E7D32),
+                        tint = FollDarkBlue,
                         modifier = Modifier.padding(12.dp)
                     )
                 }
@@ -565,10 +559,10 @@ fun AlertDetailScreen(
             },
             text = {
                 Text(
-                    text = "Confirmas que tú te haces cargo de la caída de ${alert.patientName}. La alerta se cerrará y se avisará en tiempo real a los demás cuidadores que TÚ la estás atendiendo.",
+                    text = "Confirmas que tú te haces cargo de la caída de ${alert.patientName}. La alerta se cerrará y se avisará en tiempo real a los demás cuidadores.",
                     fontSize = 15.sp,
-                    color = Color.Black,
-                    lineHeight = 21.sp,
+                    color = FollDarkGray,
+                    lineHeight = 22.sp,
                     textAlign = TextAlign.Center
                 )
             },
@@ -580,10 +574,10 @@ fun AlertDetailScreen(
                             navController.popBackStack()
                         }
                     },
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
+                    colors = ButtonDefaults.buttonColors(containerColor = FollDarkBlue),
                     shape = RoundedCornerShape(20.dp)
                 ) {
-                    Text("Sí, la atiendo", fontWeight = FontWeight.Bold, color = Color.White)
+                    Text("Sí, la atiendo", fontWeight = FontWeight.Bold)
                 }
             },
             dismissButton = {
@@ -591,8 +585,25 @@ fun AlertDetailScreen(
                     Text("Cancelar", fontWeight = FontWeight.Bold, color = FollDarkGray)
                 }
             },
-            shape = RoundedCornerShape(28.dp),
-            containerColor = Color.White
+            shape = RoundedCornerShape(24.dp),
+            containerColor = White
+        )
+    }
+}
+
+@Composable
+private fun MedicalField(
+    label: String,
+    value: String,
+    modifier: Modifier = Modifier
+) {
+    Column(modifier = modifier) {
+        Text(label, fontSize = 12.sp, color = FollDarkGray)
+        Text(
+            text = value,
+            fontSize = 16.sp,
+            fontWeight = FontWeight.Bold,
+            color = FollDarkBlue
         )
     }
 }

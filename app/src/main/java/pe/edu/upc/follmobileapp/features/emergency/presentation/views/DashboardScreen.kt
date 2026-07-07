@@ -34,7 +34,7 @@ import androidx.navigation.NavController
 import pe.edu.upc.follmobileapp.core.navigation.Routes
 import androidx.compose.ui.platform.LocalContext
 import pe.edu.upc.follmobileapp.core.ui.components.FollBottomBar
-import pe.edu.upc.follmobileapp.core.ui.components.FollTopBar
+import pe.edu.upc.follmobileapp.core.ui.components.FollTopBarWithInvitations
 import pe.edu.upc.follmobileapp.core.ui.theme.*
 import pe.edu.upc.follmobileapp.features.emergency.presentation.viewmodels.DashboardPatientState
 import pe.edu.upc.follmobileapp.features.emergency.presentation.viewmodels.DashboardViewModel
@@ -49,7 +49,7 @@ fun DashboardScreen(
     val uiState by viewModel.uiState.collectAsState()
 
     Scaffold(
-        topBar = { FollTopBar(navController) },
+        topBar = { FollTopBarWithInvitations(navController) },
         bottomBar = { FollBottomBar(navController, "dashboard_screen") },
         containerColor = FollBackground
     ) { paddingValues ->

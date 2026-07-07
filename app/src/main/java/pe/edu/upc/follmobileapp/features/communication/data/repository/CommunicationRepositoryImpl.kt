@@ -64,6 +64,12 @@ class CommunicationRepositoryImpl(
         }
     }
 
+    override fun getPendingReceivedCountFlow(): Flow<Int> {
+        return getReceivedRequestsFlow().map { list ->
+            list.count { it.status.equals("Pending", ignoreCase = true) }
+        }
+    }
+
     override suspend fun syncReceivedRequests(): Result<Unit> = runCatching {
         val response = invitationService.getReceivedInvitations()
         val entities = response.map { CareRequestMapper.toEntity(it, "received") }

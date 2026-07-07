@@ -229,7 +229,11 @@ class PatientRepositoryImpl(
         val response = patientService.getPatientsByCaregiver(caregiverUserId)
         val domainPatients = response.map { PatientMapper.toDomain(it) }
         val entities = domainPatients.map { PatientMapper.toEntity(it) }
-        localDataSource.savePatients(entities)
+        // Reemplazo total: si el cuidador no tiene abuelitos, Room debe quedar vacío.
+        localDataSource.clearPatients()
+        if (entities.isNotEmpty()) {
+            localDataSource.savePatients(entities)
+        }
     }
 
     override suspend fun syncPatientDetails(patientId: Long): Result<Unit> = runCatching {

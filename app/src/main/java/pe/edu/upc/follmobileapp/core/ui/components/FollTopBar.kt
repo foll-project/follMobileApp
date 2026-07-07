@@ -6,12 +6,33 @@ import androidx.compose.material.icons.filled.Inbox
 import androidx.compose.material.icons.filled.MedicalServices
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
 import androidx.navigation.NavController
 import pe.edu.upc.follmobileapp.core.navigation.Routes
 import pe.edu.upc.follmobileapp.core.ui.theme.FollDarkBlue
+import pe.edu.upc.follmobileapp.features.communication.data.di.CommunicationModule
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FollTopBarWithInvitations(
+    navController: NavController,
+    showBackButton: Boolean = false
+) {
+    val context = LocalContext.current
+    val repository = remember(context) { CommunicationModule.provideRepository(context) }
+    val pendingCount by repository.getPendingReceivedCountFlow().collectAsState(initial = 0)
+    FollTopBar(
+        navController = navController,
+        hasNotification = pendingCount > 0,
+        showBackButton = showBackButton
+    )
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

@@ -30,8 +30,8 @@ fun FollBottomBar(navController: NavController, currentRoute: String) {
                 .height(96.dp)
         ) {
             NavigationBarItem(
-                icon = { Icon(Icons.Default.Home, contentDescription = "Home") },
-                label = { Text("Home") },
+                icon = { Icon(Icons.Default.Home, contentDescription = "Inicio") },
+                label = { Text("Inicio") },
                 selected = currentRoute == Routes.Dashboard.route,
                 onClick = {
                     if (currentRoute != Routes.Dashboard.route) {
@@ -49,8 +49,8 @@ fun FollBottomBar(navController: NavController, currentRoute: String) {
                 )
             )
             NavigationBarItem(
-                icon = { Icon(Icons.Default.People, contentDescription = "Care") },
-                label = { Text("Care") },
+                icon = { Icon(Icons.Default.People, contentDescription = "Abuelitos") },
+                label = { Text("Abuelitos") },
                 selected = currentRoute == Routes.Care.route,
                 onClick = {
                     if (currentRoute != Routes.Care.route) {
@@ -64,8 +64,8 @@ fun FollBottomBar(navController: NavController, currentRoute: String) {
                 colors = NavigationBarItemDefaults.colors(selectedIconColor = FollDarkBlue, indicatorColor = FollLightGreen, unselectedIconColor = FollDarkBlue)
             )
             NavigationBarItem(
-                icon = { Icon(Icons.Default.SnippetFolder, contentDescription = "History") },
-                label = { Text("History") },
+                icon = { Icon(Icons.Default.SnippetFolder, contentDescription = "Historial") },
+                label = { Text("Historial") },
                 selected = currentRoute == Routes.History.route,
                 onClick = {
                     if (currentRoute != Routes.History.route) {
@@ -79,8 +79,8 @@ fun FollBottomBar(navController: NavController, currentRoute: String) {
                 colors = NavigationBarItemDefaults.colors(selectedIconColor = FollDarkBlue, indicatorColor = FollLightGreen, unselectedIconColor = FollDarkBlue)
             )
             NavigationBarItem(
-                icon = { Icon(Icons.Default.Notifications, contentDescription = "Alerts") },
-                label = { Text("Alerts") },
+                icon = { Icon(Icons.Default.Notifications, contentDescription = "Alertas") },
+                label = { Text("Alertas") },
                 selected = currentRoute == Routes.Alerts.route,
                 onClick = {
                     if (currentRoute != Routes.Alerts.route) {
@@ -94,8 +94,8 @@ fun FollBottomBar(navController: NavController, currentRoute: String) {
                 colors = NavigationBarItemDefaults.colors(selectedIconColor = FollDarkBlue, indicatorColor = FollLightGreen, unselectedIconColor = FollDarkBlue)
             )
             NavigationBarItem(
-                icon = { Icon(Icons.Default.AccountCircle, contentDescription = "Profile") },
-                label = { Text("Profile") },
+                icon = { Icon(Icons.Default.AccountCircle, contentDescription = "Perfil") },
+                label = { Text("Perfil") },
                 selected = currentRoute == Routes.Profile.route,
                 onClick = {
                     if (currentRoute != Routes.Profile.route) {

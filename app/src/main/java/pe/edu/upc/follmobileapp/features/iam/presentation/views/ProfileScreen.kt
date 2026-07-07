@@ -30,7 +30,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import pe.edu.upc.follmobileapp.core.ui.components.FollBottomBar
-import pe.edu.upc.follmobileapp.core.ui.components.FollTopBar
+import pe.edu.upc.follmobileapp.core.ui.components.FollTopBarWithInvitations
 import pe.edu.upc.follmobileapp.core.ui.theme.*
 import pe.edu.upc.follmobileapp.features.iam.presentation.viewmodels.ProfileSubScreen
 import pe.edu.upc.follmobileapp.features.iam.presentation.viewmodels.ProfileViewModel
@@ -65,7 +65,7 @@ fun ProfileScreen(
     )
 
     Scaffold(
-        topBar = { FollTopBar(navController) },
+        topBar = { FollTopBarWithInvitations(navController) },
         bottomBar = { FollBottomBar(navController, "profile_screen") },
         containerColor = Color.Transparent
     ) { paddingValues ->

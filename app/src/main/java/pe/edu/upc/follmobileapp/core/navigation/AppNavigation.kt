@@ -1,6 +1,9 @@
 package pe.edu.upc.follmobileapp.core.navigation
 
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
@@ -18,13 +21,16 @@ import pe.edu.upc.follmobileapp.features.care.presentation.views.CrearAbuelitoSc
 import pe.edu.upc.follmobileapp.features.care.presentation.views.AbuelitoDetailScreen
 import pe.edu.upc.follmobileapp.features.care.presentation.views.CuidadoresScreen
 import pe.edu.upc.follmobileapp.features.care.presentation.views.AnotacionesScreen
+import pe.edu.upc.follmobileapp.core.realtime.RealtimeIncidentResolvedHost
+import pe.edu.upc.follmobileapp.core.realtime.RealtimeInvitationHost
 
 @Composable
 fun AppNavigation() {
     val navController = rememberNavController()
 
-    // Ahora la app arranca en la pantalla Welcome
-    NavHost(navController = navController, startDestination = Routes.Welcome.route) {
+    Box(modifier = Modifier.fillMaxSize()) {
+        // Ahora la app arranca en la pantalla Welcome
+        NavHost(navController = navController, startDestination = Routes.Welcome.route) {
 
         composable(Routes.Welcome.route) {
             WelcomeScreen(navController = navController)
@@ -87,5 +93,9 @@ fun AppNavigation() {
             val patientId = patientIdStr.toLongOrNull() ?: 1L
             AnotacionesScreen(navController = navController, patientId = patientId)
         }
+        }
+
+        RealtimeIncidentResolvedHost()
+        RealtimeInvitationHost(navController = navController)
     }
 }

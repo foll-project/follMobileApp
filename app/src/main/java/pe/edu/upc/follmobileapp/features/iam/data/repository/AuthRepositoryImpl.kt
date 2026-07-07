@@ -2,6 +2,7 @@ package pe.edu.upc.follmobileapp.features.iam.data.repository
 
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
+import pe.edu.upc.follmobileapp.core.data.local.UserSessionCache
 import pe.edu.upc.follmobileapp.features.iam.data.local.AuthLocalDataSource
 import pe.edu.upc.follmobileapp.features.iam.data.local.models.UserEntity
 import pe.edu.upc.follmobileapp.features.iam.data.remote.models.LoginRequest
@@ -15,7 +16,8 @@ import java.io.IOException
 
 class AuthRepositoryImpl(
     private val localDataSource: AuthLocalDataSource,
-    private val authService: AuthService
+    private val authService: AuthService,
+    private val sessionCache: UserSessionCache
 ) : AuthRepository {
 
     override suspend fun login(credentials: LoginCredentials): Result<User> {
@@ -23,6 +25,9 @@ class AuthRepositoryImpl(
             val request = LoginRequest(credentials.email, credentials.password)
             val response = authService.login(request)
             
+            // Evitar mostrar datos de la cuenta anterior al iniciar sesión con otra.
+            sessionCache.clearAll()
+
             val userEntity = UserEntity(
                 userId = response.userId,
                 email = response.email,
@@ -75,6 +80,7 @@ class AuthRepositoryImpl(
                 // Si falla la llamada de red o el token ya expiró, de todas formas
                 // debemos limpiar la sesión local para asegurar la usabilidad.
             }
+            sessionCache.clearAll()
             localDataSource.clearSession()
             Result.success(Unit)
         } catch (e: Exception) {
