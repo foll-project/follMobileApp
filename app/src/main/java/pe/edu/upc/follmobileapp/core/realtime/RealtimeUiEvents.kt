@@ -15,8 +15,15 @@ object RealtimeUiEvents {
     private val _incidentResolved = MutableSharedFlow<IncidentResolvedUiEvent>(extraBufferCapacity = 16)
     val incidentResolved: SharedFlow<IncidentResolvedUiEvent> = _incidentResolved.asSharedFlow()
 
+    private val _invitationChanged = MutableSharedFlow<InvitationChangedUiEvent>(extraBufferCapacity = 16)
+    val invitationChanged: SharedFlow<InvitationChangedUiEvent> = _invitationChanged.asSharedFlow()
+
     fun emitIncidentResolved(event: IncidentResolvedUiEvent) {
         _incidentResolved.tryEmit(event)
+    }
+
+    fun emitInvitationChanged(event: InvitationChangedUiEvent) {
+        _invitationChanged.tryEmit(event)
     }
 }
 
@@ -31,4 +38,13 @@ data class IncidentResolvedUiEvent(
     val resolvedByName: String,
     val byMe: Boolean,
     val isFalseAlarm: Boolean
+)
+
+/**
+ * Aviso en vivo de cambio en invitaciones (nueva solicitud, aceptada o rechazada).
+ */
+data class InvitationChangedUiEvent(
+    val kind: String,
+    val title: String,
+    val message: String
 )

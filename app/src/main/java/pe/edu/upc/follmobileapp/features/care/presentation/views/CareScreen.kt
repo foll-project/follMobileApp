@@ -27,7 +27,7 @@ import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import androidx.navigation.NavController
 import pe.edu.upc.follmobileapp.core.navigation.Routes
 import pe.edu.upc.follmobileapp.core.ui.components.FollBottomBar
-import pe.edu.upc.follmobileapp.core.ui.components.FollTopBar
+import pe.edu.upc.follmobileapp.core.ui.components.FollTopBarWithInvitations
 import pe.edu.upc.follmobileapp.core.ui.theme.*
 import pe.edu.upc.follmobileapp.features.care.presentation.components.PatientCardItem
 import pe.edu.upc.follmobileapp.features.care.presentation.viewmodels.CareViewModel
@@ -50,7 +50,7 @@ fun CareScreen(
 
     Scaffold(
         bottomBar = { FollBottomBar(navController, "care_screen") },
-        topBar = { FollTopBar(navController, hasNotification = true) },
+        topBar = { FollTopBarWithInvitations(navController) },
         containerColor = Color.Transparent
     ) { paddingValues ->
         Box(

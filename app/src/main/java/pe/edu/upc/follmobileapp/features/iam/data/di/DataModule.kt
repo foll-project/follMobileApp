@@ -46,7 +46,8 @@ object DataModule {
             authRepository ?: run {
                 val instance = AuthRepositoryImpl(
                     localDataSource = provideAuthLocalDataSource(context),
-                    authService = provideAuthService(context)
+                    authService = provideAuthService(context),
+                    sessionCache = CoreModule.provideUserSessionCache(context)
                 )
                 authRepository = instance
                 instance

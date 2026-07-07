@@ -28,7 +28,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import pe.edu.upc.follmobileapp.core.ui.components.FollBottomBar
-import pe.edu.upc.follmobileapp.core.ui.components.FollTopBar
+import pe.edu.upc.follmobileapp.core.ui.components.FollTopBarWithInvitations
 import pe.edu.upc.follmobileapp.core.ui.theme.*
 import pe.edu.upc.follmobileapp.features.emergency.domain.models.FallIncident
 import pe.edu.upc.follmobileapp.features.emergency.presentation.viewmodels.FallAnnotation
@@ -62,7 +62,7 @@ fun HistoryScreen(
 
     Scaffold(
         bottomBar = { FollBottomBar(navController, "history_screen") },
-        topBar = { FollTopBar(navController) },
+        topBar = { FollTopBarWithInvitations(navController) },
         containerColor = Color.Transparent
     ) { paddingValues ->
         Box(

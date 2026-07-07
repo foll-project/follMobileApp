@@ -84,6 +84,13 @@ class DashboardViewModel(
     fun syncDashboardData() {
         viewModelScope.launch {
             _uiState.update { it.copy(isLoading = true, errorMessage = null) }
+            val user = authRepository.getLoggedInUser().firstOrNull()
+            if (user != null) {
+                val patientsResult = patientRepository.syncPatients(user.userId)
+                if (patientsResult.isFailure) {
+                    _uiState.update { it.copy(errorMessage = "Error al sincronizar abuelitos") }
+                }
+            }
             val alertsResult = emergencyRepository.syncAlerts()
             if (alertsResult.isFailure) {
                 _uiState.update { it.copy(errorMessage = "Error al conectar con el servidor") }

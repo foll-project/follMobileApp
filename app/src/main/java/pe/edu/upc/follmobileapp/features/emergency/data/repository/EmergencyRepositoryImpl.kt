@@ -112,6 +112,8 @@ class EmergencyRepositoryImpl(
                 updatedAt = dto.updatedAt
             )
         }
+        // Reemplazo total: elimina notificaciones huérfanas de sesiones anteriores.
+        fallEventDao.clearAll()
         fallEventDao.saveAlerts(entities)
 
         // Si el incidente ya fue cerrado (atendido en web/mobile/otro cuidador) pero la

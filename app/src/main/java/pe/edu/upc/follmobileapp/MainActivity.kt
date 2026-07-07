@@ -12,7 +12,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import pe.edu.upc.follmobileapp.core.di.RealtimeModule
 import pe.edu.upc.follmobileapp.core.navigation.AppNavigation
-import pe.edu.upc.follmobileapp.core.realtime.RealtimeIncidentResolvedHost
 import pe.edu.upc.follmobileapp.core.ui.theme.FollMobileAppTheme
 import pe.edu.upc.follmobileapp.features.iam.data.di.DataModule
 
@@ -27,8 +26,7 @@ class MainActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background
                 ) {
                     RealtimeConnector() // Gestiona la conexión WebSocket según la sesión
-                    AppNavigation() // Iniciamos la navegación
-                    RealtimeIncidentResolvedHost() // Banner global cuando alguien atiende una caída
+                    AppNavigation() // Iniciamos la navegación (incluye banners en tiempo real)
                 }
             }
         }

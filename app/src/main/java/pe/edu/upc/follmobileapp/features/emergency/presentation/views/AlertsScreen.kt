@@ -27,7 +27,7 @@ import androidx.navigation.NavController
 import pe.edu.upc.follmobileapp.core.navigation.Routes
 import pe.edu.upc.follmobileapp.core.ui.components.FollBottomBar
 import pe.edu.upc.follmobileapp.core.ui.theme.*
-import pe.edu.upc.follmobileapp.core.ui.components.FollTopBar
+import pe.edu.upc.follmobileapp.core.ui.components.FollTopBarWithInvitations
 import pe.edu.upc.follmobileapp.features.emergency.presentation.viewmodels.AlertViewModel
 import pe.edu.upc.follmobileapp.features.emergency.presentation.viewmodels.AlertViewModelFactory
 
@@ -49,7 +49,7 @@ fun AlertsScreen(
 
     Scaffold(
         bottomBar = { FollBottomBar(navController, "alerts_screen") },
-        topBar = { FollTopBar(navController) },
+        topBar = { FollTopBarWithInvitations(navController) },
         containerColor = Color.Transparent
     ) { paddingValues ->
         Box(modifier = Modifier.fillMaxSize().background(backgroundGradient)) {

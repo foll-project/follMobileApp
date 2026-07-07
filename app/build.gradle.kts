@@ -1,9 +1,13 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
     kotlin("kapt")
 }
+
+private val DEFAULT_API_BASE_URL = "https://foll-backend-iot-h5hkb3czhwedhph0.brazilsouth-01.azurewebsites.net/"
 
 android {
     namespace = "pe.edu.upc.follmobileapp"
@@ -17,6 +21,26 @@ android {
         versionName = "1.0"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
+        val localProperties = Properties()
+        val localPropertiesFile = rootProject.file("local.properties")
+        if (localPropertiesFile.exists()) {
+            localPropertiesFile.inputStream().use { localProperties.load(it) }
+        }
+
+        val apiBaseUrl = localProperties.getProperty("api.base.url", DEFAULT_API_BASE_URL)
+            .let { url -> if (url.endsWith("/")) url else "$url/" }
+
+        val defaultHubUrl = when {
+            apiBaseUrl.contains("10.0.2.2") -> "http://10.0.2.2:5237/"
+            apiBaseUrl.contains("localhost") -> "http://localhost:5237/"
+            else -> apiBaseUrl
+        }
+        val hubBaseUrl = localProperties.getProperty("hub.base.url", defaultHubUrl)
+            .let { url -> if (url.endsWith("/")) url else "$url/" }
+
+        buildConfigField("String", "BASE_URL", "\"$apiBaseUrl\"")
+        buildConfigField("String", "HUB_URL", "\"$hubBaseUrl\"")
     }
 
     buildTypes {
@@ -37,6 +61,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

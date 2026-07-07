@@ -15,6 +15,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import pe.edu.upc.follmobileapp.core.di.NetworkModule
 import pe.edu.upc.follmobileapp.features.care.domain.repository.PatientRepository
+import pe.edu.upc.follmobileapp.features.communication.domain.repository.CommunicationRepository
 import pe.edu.upc.follmobileapp.features.emergency.data.local.dao.FallEventDao
 import pe.edu.upc.follmobileapp.features.emergency.data.local.models.FallEventEntity
 import pe.edu.upc.follmobileapp.features.iam.data.local.AuthLocalDataSource
@@ -43,6 +44,7 @@ import java.util.TimeZone
 class NotificationRealtimeService(
     private val fallEventDao: FallEventDao,
     private val patientRepository: PatientRepository,
+    private val communicationRepository: CommunicationRepository,
     private val authLocalDataSource: AuthLocalDataSource
 ) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
@@ -70,7 +72,7 @@ class NotificationRealtimeService(
         stopInternal()
         currentToken = token
 
-        val hubUrl = NetworkModule.BASE_URL.trimEnd('/') + "/hubs/notifications"
+        val hubUrl = NetworkModule.HUB_URL.trimEnd('/') + "/hubs/notifications"
         val hub = HubConnectionBuilder.create(hubUrl)
             .withAccessTokenProvider(Single.defer { Single.just(token) })
             .build()
@@ -86,6 +88,10 @@ class NotificationRealtimeService(
         hub.on(EVENT_INCIDENT_RESOLVED, { resolved ->
             handleIncidentResolved(resolved)
         }, IncidentResolvedRealtimeDto::class.java)
+
+        hub.on(EVENT_INVITATION_CHANGED, { invitation ->
+            handleInvitationChanged(invitation)
+        }, InvitationChangedRealtimeDto::class.java)
 
         hub.onClosed { error ->
             if (error != null) {
@@ -132,6 +138,7 @@ class NotificationRealtimeService(
                     if (hub.connectionState == HubConnectionState.DISCONNECTED) {
                         hub.start().blockingAwait()
                         Log.i(TAG, "SignalR conectado a ${NetworkModule.BASE_URL}")
+                        scope.launch { syncInvitationsOnConnect() }
                     }
                     return@launch
                 } catch (e: Exception) {
@@ -246,11 +253,47 @@ class NotificationRealtimeService(
         }
     }
 
+    private fun handleInvitationChanged(dto: InvitationChangedRealtimeDto) {
+        scope.launch {
+            try {
+                communicationRepository.syncReceivedRequests()
+                communicationRepository.syncSentRequests()
+
+                if (dto.kind.equals("accepted", ignoreCase = true)) {
+                    val userId = authLocalDataSource.getLoggedInUser()?.userId
+                    if (userId != null) {
+                        patientRepository.syncPatients(userId)
+                    }
+                }
+
+                RealtimeUiEvents.emitInvitationChanged(
+                    InvitationChangedUiEvent(
+                        kind = dto.kind ?: "created",
+                        title = dto.title?.ifBlank { null } ?: "Invitación actualizada",
+                        message = dto.message?.ifBlank { null } ?: "Hay cambios en tus solicitudes de acceso."
+                    )
+                )
+            } catch (e: Exception) {
+                Log.e(TAG, "Error procesando invitación en tiempo real: ${e.message}")
+            }
+        }
+    }
+
+    private suspend fun syncInvitationsOnConnect() {
+        try {
+            communicationRepository.syncReceivedRequests()
+            communicationRepository.syncSentRequests()
+        } catch (e: Exception) {
+            Log.w(TAG, "Sync invitaciones al conectar: ${e.message}")
+        }
+    }
+
     companion object {
         private const val TAG = "FollRealtime"
         private const val EVENT_NOTIFICATION_CREATED = "notification.created"
         private const val EVENT_DEVICE_TELEMETRY = "device.telemetry"
         private const val EVENT_INCIDENT_RESOLVED = "incident.resolved"
+        private const val EVENT_INVITATION_CHANGED = "invitation.changed"
         private const val RETRY_DELAY_MS = 5_000L
         private const val RECONNECT_DELAY_MS = 3_000L
     }
