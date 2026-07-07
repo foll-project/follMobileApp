@@ -13,6 +13,8 @@ data class PatientResponseDto(
     val annotations: List<AnnotationDto>?,
     val device: DeviceDto?,
     val emergencyContacts: List<EmergencyContactDto>?,
+    val currentGuardianUserId: Int?,
+    val officialGuardianUserId: Int?,
     
     // In case details are wrapped
     val patient: PatientResponseDto?,

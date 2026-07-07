@@ -23,6 +23,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.google.mlkit.vision.codescanner.GmsBarcodeScanning
 import androidx.navigation.NavController
 import pe.edu.upc.follmobileapp.core.navigation.Routes
 import pe.edu.upc.follmobileapp.core.ui.components.FollBottomBar
@@ -44,6 +45,8 @@ fun CareScreen(
     val backgroundGradient = Brush.linearGradient(
         colors = listOf(Color(0xFFF6F8A7), Color(0xFFCAEFE2), Color(0xFFFFFDF1), Color(0xFFFFFDF1), Color(0xFFFFFDF1))
     )
+    val context = LocalContext.current
+    var isScanning by remember { mutableStateOf(false) }
 
     Scaffold(
         bottomBar = { FollBottomBar(navController, "care_screen") },
@@ -83,7 +86,31 @@ fun CareScreen(
                 }
                 Spacer(modifier = Modifier.height(12.dp))
                 OutlinedButton(
-                    onClick = { /* Lógica QR */ },
+                    onClick = {
+                        if (isScanning) return@OutlinedButton
+                        isScanning = true
+                        val scanner = GmsBarcodeScanning.getClient(context)
+                        scanner.startScan()
+                            .addOnSuccessListener { barcode ->
+                                val rawValue = barcode.rawValue
+                                if (rawValue != null && rawValue.startsWith("foll:patient:")) {
+                                    val patientId = rawValue.removePrefix("foll:patient:").toLongOrNull()
+                                    if (patientId != null) {
+                                        viewModel.vincularCuidadorPorQr(patientId)
+                                    } else {
+                                        Toast.makeText(context, "QR inválido", Toast.LENGTH_SHORT).show()
+                                    }
+                                } else {
+                                    Toast.makeText(context, "QR no reconocido", Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                            .addOnFailureListener {
+                                Toast.makeText(context, "Error al escanear", Toast.LENGTH_SHORT).show()
+                            }
+                            .addOnCompleteListener {
+                                isScanning = false
+                            }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(50.dp),

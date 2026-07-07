@@ -43,4 +43,6 @@ interface PatientRepository {
     ): Result<Unit>
     suspend fun deleteEmergencyContact(patientId: Long, contactId: Long): Result<Unit>
     suspend fun syncAnnotations(patientId: Long): Result<Unit>
+    suspend fun linkCaregiverViaQr(patientId: Long, caregiverId: Long): Result<Unit>
+    suspend fun removeCaregiver(patientId: Long, caregiverId: Long): Result<Boolean>
 }

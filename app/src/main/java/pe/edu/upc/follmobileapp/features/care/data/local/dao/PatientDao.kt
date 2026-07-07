@@ -26,4 +26,18 @@ interface PatientDao {
 
     @Query("DELETE FROM patients")
     suspend fun clearPatients()
+
+    @Query("DELETE FROM patients WHERE id NOT IN (:ids)")
+    suspend fun deletePatientsNotIn(ids: List<Long>)
+
+    @Transaction
+    suspend fun syncPatientsData(patients: List<PatientEntity>) {
+        val newIds = patients.map { it.id }
+        if (newIds.isEmpty()) {
+            clearPatients()
+        } else {
+            deletePatientsNotIn(newIds)
+            insertPatients(patients)
+        }
+    }
 }

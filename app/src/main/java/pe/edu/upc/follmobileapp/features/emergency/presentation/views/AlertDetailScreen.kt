@@ -34,6 +34,8 @@ import pe.edu.upc.follmobileapp.core.ui.components.FollTopBar
 import pe.edu.upc.follmobileapp.core.ui.theme.*
 import pe.edu.upc.follmobileapp.features.emergency.presentation.viewmodels.AlertViewModel
 import pe.edu.upc.follmobileapp.features.emergency.presentation.viewmodels.AlertViewModelFactory
+import android.content.Intent
+import android.net.Uri
 
 private val CardShape = RoundedCornerShape(24.dp)
 private val EmergencyAccent = Color(0xFFEF5350)
@@ -247,9 +249,18 @@ fun AlertDetailScreen(
                                 spotColor = FollDarkBlue
                             )
                             .clickable {
-                                uriHandler.openUri(
-                                    "https://www.google.com/maps/search/?api=1&query=${alert.latitude},${alert.longitude}"
-                                )
+                                val lat = alert.latitude
+                                val lng = alert.longitude
+                                val mapUri = Uri.parse("google.navigation:q=$lat,$lng")
+                                val mapIntent = Intent(Intent.ACTION_VIEW, mapUri)
+                                mapIntent.setPackage("com.google.android.apps.maps")
+                                try {
+                                    context.startActivity(mapIntent)
+                                } catch (e: Exception) {
+                                    val fallbackUri = Uri.parse("https://www.google.com/maps/search/?api=1&query=$lat,$lng")
+                                    val browserIntent = Intent(Intent.ACTION_VIEW, fallbackUri)
+                                    context.startActivity(browserIntent)
+                                }
                             }
                     ) {
                         Column(modifier = Modifier.padding(24.dp)) {
@@ -308,7 +319,39 @@ fun AlertDetailScreen(
 
                     // ── Acciones (jerarquía Foll: 1 primario azul, 2 secundarios outline) ──
 
-                    // 1. Atender — acción principal
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Botón de Llamar Ambulancia (Color verde premium y dialer icon)
+                    Button(
+                        onClick = {
+                            val intent = Intent(Intent.ACTION_DIAL, Uri.parse("tel:+51945464893"))
+                            context.startActivity(intent)
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp)
+                            .shadow(4.dp, RoundedCornerShape(28.dp), ambientColor = Color(0xFF2E7D32), spotColor = Color(0xFF2E7D32)),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF2E7D32)),
+                        shape = RoundedCornerShape(28.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Call,
+                            contentDescription = "Llamar",
+                            tint = Color.White,
+                            modifier = Modifier.size(22.dp)
+                        )
+                        Spacer(modifier = Modifier.width(10.dp))
+                        Text(
+                            text = "LLAMAR AMBULANCIA",
+                            fontSize = 16.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.White
+                        )
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    // Botón ATENDER: cierra el incidente y avisa en tiempo real a los demás cuidadores
                     Button(
                         onClick = { showAttendDialog = true },
                         enabled = !uiState.isLoading,

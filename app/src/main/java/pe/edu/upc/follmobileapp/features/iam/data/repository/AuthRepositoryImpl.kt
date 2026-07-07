@@ -1,8 +1,10 @@
 package pe.edu.upc.follmobileapp.features.iam.data.repository
 
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 import pe.edu.upc.follmobileapp.core.data.local.UserSessionCache
+import kotlinx.coroutines.withContext
 import pe.edu.upc.follmobileapp.features.iam.data.local.AuthLocalDataSource
 import pe.edu.upc.follmobileapp.features.iam.data.local.models.UserEntity
 import pe.edu.upc.follmobileapp.features.iam.data.remote.models.LoginRequest
@@ -82,6 +84,9 @@ class AuthRepositoryImpl(
             }
             sessionCache.clearAll()
             localDataSource.clearSession()
+            withContext(Dispatchers.IO) {
+                localDataSource.clearSession()
+            }
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
