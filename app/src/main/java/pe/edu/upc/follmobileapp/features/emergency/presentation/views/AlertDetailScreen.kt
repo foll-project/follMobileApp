@@ -34,8 +34,6 @@ import pe.edu.upc.follmobileapp.core.ui.components.FollTopBar
 import pe.edu.upc.follmobileapp.core.ui.theme.*
 import pe.edu.upc.follmobileapp.features.emergency.presentation.viewmodels.AlertViewModel
 import pe.edu.upc.follmobileapp.features.emergency.presentation.viewmodels.AlertViewModelFactory
-import android.content.Intent
-import android.net.Uri
 
 private val CardShape = RoundedCornerShape(24.dp)
 private val EmergencyAccent = Color(0xFFEF5350)

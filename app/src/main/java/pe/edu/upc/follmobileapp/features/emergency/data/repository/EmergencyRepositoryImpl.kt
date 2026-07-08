@@ -1,5 +1,6 @@
 package pe.edu.upc.follmobileapp.features.emergency.data.repository
 
+import android.os.Build
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import org.json.JSONObject
@@ -213,7 +214,25 @@ class EmergencyRepositoryImpl(
     }
 
     override suspend fun registerPushToken(token: String): Result<Unit> = runCatching {
-        apiService.registerPushToken(PushTokenRequest(token))
+        apiService.registerPushToken(
+            PushTokenRequest(
+                token = token,
+                platform = "Android",
+                deviceName = resolveDeviceName()
+            )
+        )
+    }
+
+    private fun resolveDeviceName(): String {
+        val manufacturer = Build.MANUFACTURER.orEmpty().trim()
+        val model = Build.MODEL.orEmpty().trim()
+        return when {
+            manufacturer.isBlank() && model.isBlank() -> "Android Device"
+            manufacturer.isBlank() -> model
+            model.isBlank() -> manufacturer
+            model.startsWith(manufacturer, ignoreCase = true) -> model
+            else -> "$manufacturer $model"
+        }
     }
 
     override suspend fun saveObservations(incidentId: Long, observations: String): Result<Unit> = runCatching {

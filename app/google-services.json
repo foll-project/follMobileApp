@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "276153936463",
+    "project_id": "foll-awawatech",
+    "storage_bucket": "foll-awawatech.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:276153936463:android:509f165535dac5d5acd83a",
+        "android_client_info": {
+          "package_name": "pe.edu.upc.follmobileapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCfoaascbHDfL88fCtHrEN2CiERJP48tJ0"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

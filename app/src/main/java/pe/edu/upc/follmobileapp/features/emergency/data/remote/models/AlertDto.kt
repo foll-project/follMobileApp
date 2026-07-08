@@ -21,5 +21,7 @@ data class NotificationDto(
 )
 
 data class PushTokenRequest(
-    val token: String
+    val token: String,
+    val platform: String,
+    val deviceName: String
 )

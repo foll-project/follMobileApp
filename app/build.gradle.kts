@@ -4,6 +4,7 @@ plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.google.services)
     kotlin("kapt")
 }
 
@@ -89,6 +90,9 @@ dependencies {
     implementation(libs.retrofit.converter.gson)
     implementation(libs.okhttp)
     implementation(libs.okhttp.logging)
+
+    // Firebase Cloud Messaging
+    implementation(libs.firebase.messaging)
 
     // SignalR (WebSockets en tiempo real con el backend ASP.NET Core 8)
     implementation("com.microsoft.signalr:signalr:8.0.13")
